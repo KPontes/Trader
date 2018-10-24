@@ -8,7 +8,7 @@ var _this = this;
 const logFile = "./logs/logMA.txt";
 const tradeFile = "./logs/tradeMA.txt";
 
-exports.execute = function(exchange, data, pair, params) {
+exports.execute = function(data, pair, params) {
   return new Promise(async function(resolve, reject) {
     try {
       var result = await process_MA(data, params);
@@ -26,8 +26,8 @@ function process_MA(data, params) {
       var shortMA = await calculateSMA(data, params[0]);
       var mediumMA = await calculateSMA(data, params[1]);
       var longMA = await calculateSMA(data, params[2]);
-      await logMA(shortMA, mediumMA, longMA);
-      result = await tradeMonitor(data, shortMA, mediumMA, longMA);
+      await log(shortMA, mediumMA, longMA);
+      result = await applyBusinessRules(data, shortMA, mediumMA, longMA);
       resolve(result);
     } catch (err) {
       console.log("Err process_SMA: ", err);
@@ -36,7 +36,7 @@ function process_MA(data, params) {
   });
 }
 
-function tradeMonitor(data, shortMA, mediumMA, longMA) {
+function applyBusinessRules(data, shortMA, mediumMA, longMA) {
   return new Promise(async function(resolve, reject) {
     try {
       //this obj MUST have two properties, namely: oper, factor
@@ -68,7 +68,7 @@ function tradeMonitor(data, shortMA, mediumMA, longMA) {
         moment(data.slice(-1)[0].closeTime).format("YYYYMMDDHHmmss") +
         " , " +
         data.slice(-1)[0].close;
-      console.log(line);
+      //console.log(line);
       await fs.appendFile(tradeFile, line + "\r\n");
       objMA.oper = oper;
       objMA.factor = factor;
@@ -80,7 +80,7 @@ function tradeMonitor(data, shortMA, mediumMA, longMA) {
   });
 }
 
-function logMA(shortMA, mediumMA, longMA) {
+function log(shortMA, mediumMA, longMA) {
   return new Promise(async function(resolve, reject) {
     try {
       let result;
@@ -121,7 +121,7 @@ const calculateEMA = function(data, period) {
           arrEMA[i] = initialSMA;
         } else {
           arrEMA[i] =
-            (data[i].close - arrEMA[i - 1]) * multiplier + arrEMA[i - 1];
+            multiplier * (data[i].close - arrEMA[i - 1]) + arrEMA[i - 1];
           arrEMA[i] = _.round(arrEMA[i], 12);
         }
       }

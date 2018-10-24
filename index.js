@@ -4,6 +4,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 
 const Monitor = require("./controller/monitor.js");
+const trade = require("./controller/trade.js");
 
 const app = express();
 const port = process.env.PORT;
@@ -13,6 +14,8 @@ app.use(bodyParser.json());
 app.get("/express", (req, res) => {
   res.send({ message: "Welcome to chart-trader Express Server" });
 });
+
+process.env["BASEPATH"] = __dirname;
 
 if (process.env.NODE_ENV === "production") {
   var sslRedirect = require("heroku-ssl-redirect");
@@ -29,11 +32,21 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-var monitor = new Monitor(3000);
 app.post("/monitor", async (req, res) => {
   try {
-    var result = await monitor.execute(req.body.indicator);
-    res.send(result);
+    var monitor = new Monitor(60000);
+    var result = await monitor.execute();
+    res.status(200).send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+app.post("/test", async (req, res) => {
+  try {
+    var result = await trade.oneTrade();
+    res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);
     res.status(400).send(e);

@@ -1,0 +1,10 @@
+[
+  {
+    "user": "Krishnan",
+    "email": "krishnanpontes@gmail.com",
+    "pairs": "XRPUSDT",
+    "quantity": 200,
+    "indicators": "SMA, KLINES",
+    "lastOrder": "BUY"
+  }
+]
