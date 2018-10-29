@@ -9,34 +9,37 @@ const modelUsers = require("../models/juser");
 var _this = this;
 const tradeFile = "./logs/aggregateTrades.txt";
 
-exports.execute = function(tradeOper, pair, oIndicadores) {
+exports.execute = function(oper, pair, oIndicadores) {
   return new Promise(async function(resolve, reject) {
     try {
-      let oper;
-      let result = "";
+      let result = "no trade";
       users = await modelUsers.getUsers();
       //FALTA BUSCAR O BALANCE DISPONIVEL DA ACCOUNT E TRATAR EM QUANTITY
-      tradeOper.buy > tradeOper.sell ? (oper = "BUY") : (oper = "SELL");
-      if (tradeOper.buy !== tradeOper.sell) {
-        //do not execute same operation direction repeatedly
-        if (oper.toUpperCase() !== users[0].lastOrder.toUpperCase()) {
-          console.log("tradeOper", tradeOper);
+      //do not execute same operation direction repeatedly
+      if (
+        oper.toLowerCase() !== users[0].pairs[0].lastOrder.toLowerCase() &&
+        oper !== "none"
+      ) {
+        var symbolData = await binance.symbolPrice(pair);
+        var variation =
+          (symbolData.price - users[0].pairs[0].lastPrice) /
+          users[0].pairs[0].lastPrice;
+        if (Math.abs(variation) > users[0].pairs[0].minVariation) {
+          console.log("tradeOper", oper + " , " + symbolData.price);
           result = await binance.putOrder(
             oper,
             pair,
             "MARKET",
-            users[0].quantity
+            users[0].pairs[0].quantity
           );
-          //por enquanto só funciona para 1 user
-          users[0].lastOrder = oper;
+          //update user. por enquanto só funciona para 1 user
+          users[0].pairs[0].lastPrice = symbolData.price;
+          users[0].pairs[0].lastOrder = oper;
           result = await modelUsers.setUsers(users);
-          var data = await binance.symbolPrice(pair);
-          await log(oper, data.price, JSON.stringify(oIndicadores));
+          await log(oper, symbolData.price, JSON.stringify(oIndicadores));
         }
-        resolve(result);
-      } else {
-        resolve("no trade");
       }
+      resolve(result);
     } catch (err) {
       console.log("Err trade execute execute: ", err);
       reject(err);
@@ -63,7 +66,7 @@ function log(oper, price, indicadores) {
       var line =
         oper +
         " ; " +
-        moment().format("YYYYMMDDHHmmss") +
+        moment().format("YYYYMMDD:HHmmss") +
         " ; " +
         price.toString() +
         " ; " +

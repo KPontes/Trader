@@ -2,16 +2,20 @@ const moment = require("moment");
 const _ = require("lodash");
 const fs = require("fs-extra");
 
+const modelUsers = require("../models/juser");
+
 ("use strict");
 
 var _this = this;
 
 const tradeFile = "./logs/tradeklines.txt";
+var users = {};
 
-exports.execute = function(data, pair, params = "") {
+exports.execute = function(data) {
   return new Promise(async function(resolve, reject) {
     try {
-      var result = await process_KL(data, params);
+      users = await modelUsers.getUsers();
+      var result = await process_KL(data);
       resolve(result);
     } catch (err) {
       console.log("Err movingAvg execute: ", err);
@@ -20,31 +24,26 @@ exports.execute = function(data, pair, params = "") {
   });
 };
 
-function process_KL(data, params) {
+function process_KL(data) {
   return new Promise(async function(resolve, reject) {
     try {
-      var kDirection = [0, 0]; //stores ups and downs for last two groups of candles
-      var kLines = data.slice(-7, -4);
+      var kDirection = []; //stores ups and downs for last two groups of 4 candles
+      var kLines = data.slice(-8);
       for (var i = 0; i < kLines.length; i++) {
         kLines[i].close >= kLines[i].open
-          ? (kDirection[0] += 1)
-          : (kDirection[0] -= 1);
+          ? (kDirection[i] = 1)
+          : (kDirection[i] = -1);
       }
-      var kLines = data.slice(-3);
-      for (var i = 0; i < kLines.length; i++) {
-        kLines[i].close >= kLines[i].open
-          ? (kDirection[1] += 1)
-          : (kDirection[1] -= 1);
-      }
-      var groupVariation = (kLines[2].close - kLines[0].open) / kLines[0].open;
-      var candleVariation = (kLines[2].close - kLines[2].open) / kLines[2].open;
+
+      var groupVariation = (kLines[3].close - kLines[0].open) / kLines[0].open;
+      var candleVariation = (kLines[3].close - kLines[3].open) / kLines[3].open;
 
       objKLines = await applyBusinessRules(
         kDirection,
         groupVariation,
         candleVariation
       );
-      await log(data, objKLines);
+      //await log(data, objKLines);
       resolve(objKLines);
     } catch (err) {
       console.log("Err process_KL: ", err);
@@ -57,61 +56,78 @@ function applyBusinessRules(kDirection, groupVariation, candleVariation) {
   return new Promise(async function(resolve, reject) {
     try {
       //this obj MUST have two properties, namely: oper, factor
-      var objKLines = {};
-      var factor = []; //stores factor for each rule
-      var rules = []; //store business rules that match recent data
+      var objKLines = [];
+      var obj = { indic: "KLines" };
+      const variation = users[0].pairs[0].minVariation;
       //treat magnitude of group and last candle variation
       switch (true) {
-        case groupVariation > 0.002 || candleVariation > 0.002:
-          rules[0] = "large variation";
-          oper = "buy";
-          factor[0] = 4;
+        //case groupVariation > variation || candleVariation > variation:
+        case groupVariation > variation:
+          obj.rules = "large variation";
+          obj.oper = "buy";
+          obj.factor = 4;
           break;
-        case groupVariation < -0.002 || candleVariation < -0.002:
-          rules[0] = "large variation";
-          oper = "sell";
-          factor[0] = 4;
+        case groupVariation < -variation:
+          obj.rules = "large variation";
+          obj.oper = "sell";
+          obj.factor = 4;
           break;
         case groupVariation > 0 || candleVariation > 0:
-          rules[0] = "small variation";
-          oper = "buy";
-          factor[0] = 1;
+          obj.rules = "small variation";
+          obj.oper = "none";
+          obj.factor = 0;
           break;
         default:
-          rules[0] = "small variation";
-          oper = "sell";
-          factor[0] = 1;
+          obj.rules = "small variation";
+          obj.oper = "none";
+          obj.factor = 0;
           break;
       }
-      //keeps the sum of up/down of last three candles.
+      objKLines.push(obj);
+      obj = { indic: "KLines" };
+      //keeps the sum of up/down of last four candles.
       //If all in the same kDirection indicates strong trend
-      switch (Math.abs(kDirection[1])) {
-        case 1: //2 onde direction minus one other direction
-          rules[1] = "same 2 directions";
-          factor[1] = 1;
+      const reducer = (accumulator, currentValue) => accumulator + currentValue;
+      switch (kDirection.slice(-4).reduce(reducer)) {
+        case 4:
+          obj.oper = "buy";
+          obj.rules = "same 4 up dir";
+          obj.factor = 4;
           break;
-        case 3:
-          rules[1] = "same 3 directions";
-          factor[1] = 4;
+        case -4:
+          obj.oper = "sell";
+          obj.rules = "same 4 down dir";
+          obj.factor = 4;
           break;
         default:
-          rules[1] = "same 2 directions";
-          factor[1] = 1;
+          obj.oper = "none";
+          obj.rules = "mixed directions";
+          obj.factor = 0;
           break;
       }
-      //ultimos 5 candles positivos e atual negativo. Inversão forte de tendencia
-      if (kDirection[0] + kDirection[1] >= 5 && oper === "sell") {
-        rules[2] = "uptrend inversion";
-        factor[2] = 4;
+      objKLines.push(obj);
+      obj = { indic: "KLines" };
+      //ultimos 7 candles positivos e atual negativo. Inversão forte de tendencia
+      if (
+        kDirection.slice(0, 7).reduce(reducer) === 7 &&
+        kDirection.slice(-1) === -1
+      ) {
+        obj.oper = "sell";
+        obj.rules = "inversion to downtrend";
+        obj.factor = 4;
+        objKLines.push(obj);
       }
-      //ultimos 5 candles negativos e atual positivo. Inversão forte de tendencia
-      if (kDirection[0] + kDirection[1] <= -5 && oper === "buy") {
-        rules[2] = "downtrend inversion";
-        factor[2] = 4;
+      //ultimos 7 candles negativos e atual positivo. Inversão forte de tendencia
+      if (
+        kDirection.slice(0, 7).reduce(reducer) === -7 &&
+        kDirection.slice(-1) === 1
+      ) {
+        obj.oper = "buy";
+        obj.rules = "inversion to uptrend";
+        obj.factor = 4;
+        objKLines.push(obj);
       }
-      objKLines.oper = oper;
-      objKLines.factor = Math.max(...factor);
-      objKLines.rule = rules.join(" / ");
+
       resolve(objKLines);
     } catch (err) {
       console.log("Err logKL: ", err);
@@ -123,21 +139,22 @@ function applyBusinessRules(kDirection, groupVariation, candleVariation) {
 function log(data, objKLines) {
   return new Promise(async function(resolve, reject) {
     try {
+      //PRECISA TRATAR CADA LINHA DE OBJ
       var line =
-        objKLines.oper +
+        objKLines[0].oper +
         " , " +
-        objKLines.factor.toString() +
+        objKLines[0].factor.toString() +
         " , " +
-        objKLines.rule +
+        objKLines[0].rule +
         " , " +
-        moment(data.slice(-1)[0].closeTime).format("YYYYMMDDHHmmss") +
+        moment(data.slice(-1)[0].closeTime).format("YYYYMMDD:HHmmss") +
         " , " +
         data.slice(-1)[0].close;
       //console.log(line);
       await fs.appendFile(tradeFile, line + "\r\n");
       resolve("OK");
     } catch (err) {
-      console.log("Err logMA: ", err);
+      console.log("Err logKL: ", err);
       reject(err);
     }
   });

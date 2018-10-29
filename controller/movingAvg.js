@@ -8,10 +8,11 @@ var _this = this;
 const logFile = "./logs/logMA.txt";
 const tradeFile = "./logs/tradeMA.txt";
 
-exports.execute = function(data, pair, params) {
+exports.execute = function(data, params) {
   return new Promise(async function(resolve, reject) {
     try {
-      var result = await process_MA(data, params);
+      var _params = params.split(",");
+      var result = await process_MA(data, _params);
       resolve(result);
     } catch (err) {
       console.log("Err movingAvg execute: ", err);
@@ -23,11 +24,13 @@ exports.execute = function(data, pair, params) {
 function process_MA(data, params) {
   return new Promise(async function(resolve, reject) {
     try {
-      var shortMA = await calculateSMA(data, params[0]);
-      var mediumMA = await calculateSMA(data, params[1]);
-      var longMA = await calculateSMA(data, params[2]);
+      var arr = data.map(item => item.close);
+      var xShortMA = await _this.calculateSMA(arr, 4);
+      var shortMA = await _this.calculateSMA(arr, parseInt(params[0]));
+      var mediumMA = await _this.calculateSMA(arr, parseInt(params[1]));
+      var longMA = await _this.calculateSMA(arr, parseInt(params[2]));
       await log(shortMA, mediumMA, longMA);
-      result = await applyBusinessRules(data, shortMA, mediumMA, longMA);
+      result = await applyBusinessRules(xShortMA, shortMA, mediumMA, longMA);
       resolve(result);
     } catch (err) {
       console.log("Err process_SMA: ", err);
@@ -36,48 +39,73 @@ function process_MA(data, params) {
   });
 }
 
-function applyBusinessRules(data, shortMA, mediumMA, longMA) {
+function applyBusinessRules(xShortMA, shortMA, mediumMA, longMA) {
   return new Promise(async function(resolve, reject) {
     try {
-      //this obj MUST have two properties, namely: oper, factor
-      var objMA = {};
-      var factor = 1;
-      shortMA.slice(-1) > mediumMA.slice(-1) ||
-      shortMA.slice(-1) > longMA.slice(-1)
-        ? (oper = "buy")
-        : (oper = "sell");
-      if (
-        shortMA.slice(-1) > mediumMA.slice(-1) &&
-        shortMA.slice(-1) > longMA.slice(-1)
-      ) {
-        oper = "buy";
-        factor = 3;
-      }
-      if (
-        shortMA.slice(-1) < mediumMA.slice(-1) &&
-        shortMA.slice(-1) < longMA.slice(-1)
-      ) {
-        oper = "sell";
-        factor = 3;
-      }
-      var line =
-        oper +
-        " , " +
-        factor.toString() +
-        " , " +
-        moment(data.slice(-1)[0].closeTime).format("YYYYMMDDHHmmss") +
-        " , " +
-        data.slice(-1)[0].close;
-      //console.log(line);
-      await fs.appendFile(tradeFile, line + "\r\n");
-      objMA.oper = oper;
-      objMA.factor = factor;
-      resolve(objMA);
+      var objMA = [];
+      objMA[0] = applyCrossingLines(shortMA, mediumMA, longMA);
+      objMA[1] = applyTrend(xShortMA);
+
+      resolve(objMA); //this obj MUST have named properties: oper, factor
     } catch (err) {
-      console.log("Err logMA: ", err);
+      console.log("Err rulesMA: ", err);
       reject(err);
     }
   });
+}
+
+function applyCrossingLines(shortMA, mediumMA, longMA) {
+  var objMA = { indic: "MA", oper: "none", factor: 1, rules: "no cross line" };
+
+  shortMA.slice(-1) > mediumMA.slice(-1) || shortMA.slice(-1) > longMA.slice(-1)
+    ? ((objMA.oper = "buy"), (objMA.rules = "one up cross"))
+    : ((objMA.oper = "sell"), (objMA.rules = "one down cross"));
+  if (
+    shortMA.slice(-1) > mediumMA.slice(-1) &&
+    shortMA.slice(-1) > longMA.slice(-1)
+  ) {
+    objMA.oper = "buy";
+    objMA.rules = "two up cross";
+    mediumMA.slice(-1) > longMA.slice(-1)
+      ? (objMA.factor = 4)
+      : (objMA.factor = 2);
+  }
+  if (
+    shortMA.slice(-1) < mediumMA.slice(-1) &&
+    shortMA.slice(-1) < longMA.slice(-1)
+  ) {
+    objMA.oper = "sell";
+    objMA.rules = "two down cross";
+    mediumMA.slice(-1) < longMA.slice(-1)
+      ? (objMA.factor = 4)
+      : (objMA.factor = 2);
+  }
+
+  return objMA;
+}
+
+function applyTrend(xshortMA) {
+  var objMA = { indic: "MA", oper: "none", factor: 0, rules: "" };
+  //downtrend curve
+  if (
+    xshortMA.slice(-1) < xshortMA.slice(-2, -1) &&
+    xshortMA.slice(-2, -1) < xshortMA.slice(-3, -2)
+  ) {
+    objMA.oper = "sell";
+    objMA.factor = 3;
+    objMA.rules = "change to down trend";
+  }
+  //uptrend curve
+  if (
+    xshortMA.slice(-1) > xshortMA.slice(-2, -1) &&
+    xshortMA.slice(-2, -1) > xshortMA.slice(-3, -2)
+  ) {
+    objMA.oper = "buy";
+    objMA.factor = 3;
+    objMA.rules = "change to up trend";
+  }
+
+  return objMA;
 }
 
 function log(shortMA, mediumMA, longMA) {
@@ -99,7 +127,7 @@ function log(shortMA, mediumMA, longMA) {
   });
 }
 
-const calculateEMA = function(data, period) {
+exports.calculateEMA = function(data, period) {
   return new Promise(async function(resolve, reject) {
     // Initial SMA: 10-period sum / 10
     // Multiplier: (2 / (Time periods + 1) ) = (2 / (10 + 1) ) = 0.1818 (18.18%)
@@ -109,9 +137,7 @@ const calculateEMA = function(data, period) {
       var _sum = 0;
       var initPeriod = data.slice(0, period);
       //initial period SMA
-      var initialSMA = initPeriod
-        .map(item => item.close)
-        .reduce((a, b) => a + b, 0);
+      var initialSMA = initPeriod.reduce((a, b) => a + b, 0);
       initialSMA = _.round(initialSMA / period, 12);
       //calc multiplier
       var multiplier = _.round(2 / (period + 1), 12);
@@ -120,40 +146,39 @@ const calculateEMA = function(data, period) {
         if (i < period) {
           arrEMA[i] = initialSMA;
         } else {
-          arrEMA[i] =
-            multiplier * (data[i].close - arrEMA[i - 1]) + arrEMA[i - 1];
+          arrEMA[i] = multiplier * (data[i] - arrEMA[i - 1]) + arrEMA[i - 1];
           arrEMA[i] = _.round(arrEMA[i], 12);
         }
       }
       resolve(arrEMA);
     } catch (err) {
-      console.log("Err process_EMA: ", err);
+      console.log("Err calculate_EMA: ", err);
       reject(err);
     }
   });
 };
 
-const calculateSMA = function(data, period) {
+exports.calculateSMA = function(data, period) {
   return new Promise(async function(resolve, reject) {
     try {
       var arrSMA = [];
       var _sum = 0;
       var initPeriod = data.slice(0, period);
       //initial period absolute sum
-      _sum = initPeriod.map(item => item.close).reduce((a, b) => a + b, 0);
+      _sum = initPeriod.reduce((a, b) => a + b, 0);
       //sum as a sliding window within the period
       for (var i = 0; i < data.length; i++) {
         if (i < period) {
           arrSMA[i] = _sum;
         } else {
-          arrSMA[i] = arrSMA[i - 1] + data[i].close - data[i - period].close;
+          arrSMA[i] = arrSMA[i - 1] + data[i] - data[i - period];
         }
       }
       //calc average considering the period of sum
       const result = arrSMA.map(item => _.round(item / period, 12));
       resolve(result);
     } catch (err) {
-      console.log("Err process_SMA: ", err);
+      console.log("Err calculate_SMA: ", err);
       reject(err);
     }
   });

@@ -34,7 +34,7 @@ if (process.env.NODE_ENV === "production") {
 
 app.post("/monitor", async (req, res) => {
   try {
-    var monitor = new Monitor(60000);
+    var monitor = new Monitor(3000);
     var result = await monitor.execute();
     res.status(200).send(result);
   } catch (e) {

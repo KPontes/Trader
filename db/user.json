@@ -2,9 +2,15 @@
   {
     "user": "Krishnan",
     "email": "krishnanpontes@gmail.com",
-    "pairs": "XRPUSDT",
-    "quantity": 200,
-    "indicators": "SMA, KLINES",
-    "lastOrder": "BUY"
+    "pairs": [
+      {
+        "symbol": "XRPUSDT",
+        "quantity": 200,
+        "indicators": "SMA, KLINES, RSI",
+        "minVariation": 0.003,
+        "lastOrder": "sell",
+        "lastPrice": "0.46096000"
+      }
+    ]
   }
 ]
