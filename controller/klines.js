@@ -9,22 +9,23 @@ const modelUsers = require("../models/juser");
 var _this = this;
 
 const tradeFile = "./logs/tradeklines.txt";
+const strategy = "KLines";
 var users = {};
 
 exports.execute = function(data) {
   return new Promise(async function(resolve, reject) {
     try {
       users = await modelUsers.getUsers();
-      var result = await process_KL(data);
+      var result = await process(data);
       resolve(result);
     } catch (err) {
-      console.log("Err movingAvg execute: ", err);
+      console.log(`Err ${strategy} execute`, err);
       reject(err);
     }
   });
 };
 
-function process_KL(data) {
+function process(data) {
   return new Promise(async function(resolve, reject) {
     try {
       var kDirection = []; //stores ups and downs for last two groups of 4 candles
@@ -46,7 +47,7 @@ function process_KL(data) {
       //await log(data, objKLines);
       resolve(objKLines);
     } catch (err) {
-      console.log("Err process_KL: ", err);
+      console.log(`Err ${strategy} process`, err);
       reject(err);
     }
   });
@@ -57,83 +58,101 @@ function applyBusinessRules(kDirection, groupVariation, candleVariation) {
     try {
       //this obj MUST have two properties, namely: oper, factor
       var objKLines = [];
-      var obj = { indic: "KLines" };
+      var obj = {};
       const variation = users[0].pairs[0].minVariation;
-      //treat magnitude of group and last candle variation
-      switch (true) {
-        //case groupVariation > variation || candleVariation > variation:
-        case groupVariation > variation:
-          obj.rules = "large variation";
-          obj.oper = "buy";
-          obj.factor = 4;
-          break;
-        case groupVariation < -variation:
-          obj.rules = "large variation";
-          obj.oper = "sell";
-          obj.factor = 4;
-          break;
-        case groupVariation > 0 || candleVariation > 0:
-          obj.rules = "small variation";
-          obj.oper = "none";
-          obj.factor = 0;
-          break;
-        default:
-          obj.rules = "small variation";
-          obj.oper = "none";
-          obj.factor = 0;
-          break;
-      }
-      objKLines.push(obj);
-      obj = { indic: "KLines" };
-      //keeps the sum of up/down of last four candles.
-      //If all in the same kDirection indicates strong trend
-      const reducer = (accumulator, currentValue) => accumulator + currentValue;
-      switch (kDirection.slice(-4).reduce(reducer)) {
-        case 4:
-          obj.oper = "buy";
-          obj.rules = "same 4 up dir";
-          obj.factor = 4;
-          break;
-        case -4:
-          obj.oper = "sell";
-          obj.rules = "same 4 down dir";
-          obj.factor = 4;
-          break;
-        default:
-          obj.oper = "none";
-          obj.rules = "mixed directions";
-          obj.factor = 0;
-          break;
-      }
-      objKLines.push(obj);
-      obj = { indic: "KLines" };
-      //ultimos 7 candles positivos e atual negativo. Inversão forte de tendencia
-      if (
-        kDirection.slice(0, 7).reduce(reducer) === 7 &&
-        kDirection.slice(-1) === -1
-      ) {
-        obj.oper = "sell";
-        obj.rules = "inversion to downtrend";
-        obj.factor = 4;
-        objKLines.push(obj);
-      }
-      //ultimos 7 candles negativos e atual positivo. Inversão forte de tendencia
-      if (
-        kDirection.slice(0, 7).reduce(reducer) === -7 &&
-        kDirection.slice(-1) === 1
-      ) {
-        obj.oper = "buy";
-        obj.rules = "inversion to uptrend";
-        obj.factor = 4;
-        objKLines.push(obj);
-      }
+      obj = variationRules(variation, candleVariation, groupVariation);
+      if (obj.oper && obj.factor) objKLines.push(obj);
+      obj = directionRules(kDirection);
+      if (obj.oper && obj.factor) objKLines.push(obj);
+      obj = trendInversionRules(kDirection);
+      if (obj.oper && obj.factor) objKLines.push(obj);
 
       resolve(objKLines);
     } catch (err) {
-      console.log("Err logKL: ", err);
+      console.log(`Err ${strategy} rules`, err);
       reject(err);
     }
   });
+}
+
+function variationRules(variation, candleVariation, groupVariation) {
+  //treat magnitude of group and last candle variation
+  var obj = { indic: "KLines" };
+  switch (true) {
+    //case groupVariation > variation || candleVariation > variation:
+    case groupVariation > variation:
+      obj.rules = "large variation";
+      obj.oper = "buy";
+      obj.factor = 4;
+      break;
+    case groupVariation < -variation:
+      obj.rules = "large variation";
+      obj.oper = "sell";
+      obj.factor = 4;
+      break;
+    case groupVariation > 0 || candleVariation > 0:
+      obj.rules = "small variation";
+      obj.oper = "none";
+      obj.factor = 0;
+      break;
+    default:
+      obj.rules = "small variation";
+      obj.oper = "none";
+      obj.factor = 0;
+      break;
+  }
+  return obj;
+}
+
+function directionRules(kDirection) {
+  //keeps the sum of up/down of last four candles.
+  //If all in the same kDirection indicates strong trend
+  var obj = { indic: "KLines" };
+  const reducer = (accumulator, currentValue) => accumulator + currentValue;
+  switch (kDirection.slice(-4).reduce(reducer)) {
+    case 4:
+      obj.oper = "buy";
+      obj.rules = "same 4 up dir";
+      obj.factor = 4;
+      break;
+    case -4:
+      obj.oper = "sell";
+      obj.rules = "same 4 down dir";
+      obj.factor = 4;
+      break;
+    default:
+      obj.oper = "none";
+      obj.rules = "mixed directions";
+      obj.factor = 0;
+      break;
+  }
+  return obj;
+}
+
+function trendInversionRules(kDirection) {
+  //ultimos 7 candles positivos e atual negativo. Inversão forte de tendencia
+  obj = {};
+  const reducer = (accumulator, currentValue) => accumulator + currentValue;
+  if (
+    kDirection.slice(0, 7).reduce(reducer) === 7 &&
+    kDirection.slice(-1) === -1
+  ) {
+    obj.indic = "KLines";
+    obj.oper = "sell";
+    obj.rules = "inversion to downtrend";
+    obj.factor = 4;
+  }
+  //ultimos 7 candles negativos e atual positivo. Inversão forte de tendencia
+  if (
+    kDirection.slice(0, 7).reduce(reducer) === -7 &&
+    kDirection.slice(-1) === 1
+  ) {
+    obj.indic = "KLines";
+    obj.oper = "buy";
+    obj.rules = "inversion to uptrend";
+    obj.factor = 4;
+  }
+  return obj;
 }
 
 function log(data, objKLines) {
@@ -154,7 +173,7 @@ function log(data, objKLines) {
       await fs.appendFile(tradeFile, line + "\r\n");
       resolve("OK");
     } catch (err) {
-      console.log("Err logKL: ", err);
+      console.log(`Err ${strategy} log`, err);
       reject(err);
     }
   });

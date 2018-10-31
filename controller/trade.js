@@ -9,7 +9,7 @@ const modelUsers = require("../models/juser");
 var _this = this;
 const tradeFile = "./logs/aggregateTrades.txt";
 
-exports.execute = function(oper, pair, oIndicadores) {
+exports.execute = function(oper, pair, arrMin, arrHour, bigTrend) {
   return new Promise(async function(resolve, reject) {
     try {
       let result = "no trade";
@@ -36,7 +36,7 @@ exports.execute = function(oper, pair, oIndicadores) {
           users[0].pairs[0].lastPrice = symbolData.price;
           users[0].pairs[0].lastOrder = oper;
           result = await modelUsers.setUsers(users);
-          await log(oper, symbolData.price, JSON.stringify(oIndicadores));
+          await log(oper, symbolData.price, arrMin, arrHour, bigTrend);
         }
       }
       resolve(result);
@@ -60,7 +60,7 @@ exports.oneTrade = function() {
   });
 };
 
-function log(oper, price, indicadores) {
+function log(oper, price, arrMin, arrHour, bigTrend) {
   return new Promise(async function(resolve, reject) {
     try {
       var line =
@@ -70,7 +70,11 @@ function log(oper, price, indicadores) {
         " ; " +
         price.toString() +
         " ; " +
-        indicadores;
+        JSON.stringify(arrMin) +
+        " ; " +
+        JSON.stringify(arrHour) +
+        " ; " +
+        JSON.stringify(bigTrend);
       console.log(line);
       await fs.appendFile(tradeFile, line + "\r\n");
       resolve("OK");

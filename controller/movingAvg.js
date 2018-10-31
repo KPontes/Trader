@@ -7,33 +7,35 @@ const fs = require("fs-extra");
 var _this = this;
 const logFile = "./logs/logMA.txt";
 const tradeFile = "./logs/tradeMA.txt";
+const strategy = "MA";
 
-exports.execute = function(data, params) {
+function execute(data, params) {
   return new Promise(async function(resolve, reject) {
     try {
       var _params = params.split(",");
-      var result = await process_MA(data, _params);
+      var result = await process(data, _params);
       resolve(result);
     } catch (err) {
-      console.log("Err movingAvg execute: ", err);
+      console.log(`Err ${strategy} execute`, err);
+      //console.log("Err movingAvg execute: ", err);
       reject(err);
     }
   });
-};
+}
 
-function process_MA(data, params) {
+function process(data, params) {
   return new Promise(async function(resolve, reject) {
     try {
       var arr = data.map(item => item.close);
-      var xShortMA = await _this.calculateSMA(arr, 4);
-      var shortMA = await _this.calculateSMA(arr, parseInt(params[0]));
-      var mediumMA = await _this.calculateSMA(arr, parseInt(params[1]));
-      var longMA = await _this.calculateSMA(arr, parseInt(params[2]));
+      var xShortMA = await calculateSMA(arr, 4);
+      var shortMA = await calculateSMA(arr, parseInt(params[0]));
+      var mediumMA = await calculateSMA(arr, parseInt(params[1]));
+      var longMA = await calculateSMA(arr, parseInt(params[2]));
       await log(shortMA, mediumMA, longMA);
       result = await applyBusinessRules(xShortMA, shortMA, mediumMA, longMA);
       resolve(result);
     } catch (err) {
-      console.log("Err process_SMA: ", err);
+      console.log(`Err ${strategy} process:`, err);
       reject(err);
     }
   });
@@ -127,7 +129,7 @@ function log(shortMA, mediumMA, longMA) {
   });
 }
 
-exports.calculateEMA = function(data, period) {
+function calculateEMA(data, period) {
   return new Promise(async function(resolve, reject) {
     // Initial SMA: 10-period sum / 10
     // Multiplier: (2 / (Time periods + 1) ) = (2 / (10 + 1) ) = 0.1818 (18.18%)
@@ -156,9 +158,9 @@ exports.calculateEMA = function(data, period) {
       reject(err);
     }
   });
-};
+}
 
-exports.calculateSMA = function(data, period) {
+function calculateSMA(data, period) {
   return new Promise(async function(resolve, reject) {
     try {
       var arrSMA = [];
@@ -182,4 +184,10 @@ exports.calculateSMA = function(data, period) {
       reject(err);
     }
   });
+}
+
+module.exports = {
+  execute: execute,
+  calculateSMA: calculateSMA,
+  calculateEMA: calculateEMA
 };

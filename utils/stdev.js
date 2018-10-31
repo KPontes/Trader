@@ -1,23 +1,25 @@
-function standardDeviation(values) {
-  var avg = average(values);
+module.exports = {
+  stdev: function standardDeviation(values) {
+    var avg = this.average(values);
 
-  var squareDiffs = values.map(function(value) {
-    var diff = value - avg;
-    var sqrDiff = diff * diff;
-    return sqrDiff;
-  });
+    var squareDiffs = values.map(function(value) {
+      var diff = value - avg;
+      var sqrDiff = diff * diff;
+      return sqrDiff;
+    });
 
-  var avgSquareDiff = average(squareDiffs);
+    var avgSquareDiff = this.average(squareDiffs);
 
-  var stdDev = Math.sqrt(avgSquareDiff);
-  return stdDev;
-}
+    var stdDev = Math.sqrt(avgSquareDiff);
+    return stdDev;
+  },
 
-function average(data) {
-  var sum = data.reduce(function(sum, value) {
-    return sum + value;
-  }, 0);
+  average: function average(data) {
+    var sum = data.reduce(function(sum, value) {
+      return sum + value;
+    }, 0);
 
-  var avg = sum / data.length;
-  return avg;
-}
+    var avg = sum / data.length;
+    return avg;
+  }
+};

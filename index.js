@@ -35,7 +35,7 @@ if (process.env.NODE_ENV === "production") {
 app.post("/monitor", async (req, res) => {
   try {
     var monitor = new Monitor(3000);
-    var result = await monitor.execute();
+    var result = await monitor.pooling();
     res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);

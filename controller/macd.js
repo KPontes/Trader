@@ -8,27 +8,28 @@ const mavg = require("./movingAvg.js");
 
 var _this = this;
 const logFile = "./logs/logMACD.txt";
+const strategy = "MACD";
 
 exports.execute = function(data, params) {
   return new Promise(async function(resolve, reject) {
     try {
-      var result = await process_MACD(data, params);
+      var result = await process(data, params);
       resolve(result);
     } catch (err) {
-      console.log("Err MACD execute: ", err);
+      console.log(`Err ${strategy} execute`, err);
       reject(err);
     }
   });
 };
 
-function process_MACD(data, params) {
+function process(data, params) {
   return new Promise(async function(resolve, reject) {
     try {
-      var macdData = await calculateMACD(data);
+      var macdData = await calculate(data);
       result = await applyBusinessRules(macdData);
       resolve(result);
     } catch (err) {
-      console.log("Err process_MACD: ", err);
+      console.log(`Err ${strategy} process`, err);
       reject(err);
     }
   });
@@ -65,13 +66,13 @@ function applyBusinessRules(macd) {
 
       resolve(objMACD); //this obj MUST have named properties: oper, factor
     } catch (err) {
-      console.log("Err rulesMACD: ", err);
+      console.log(`Err ${strategy} rules`, err);
       reject(err);
     }
   });
 }
 
-const calculateMACD = function(data, period) {
+const calculate = function(data, period) {
   return new Promise(async function(resolve, reject) {
     try {
       // MACD Line: (12-day EMA - 26-day EMA)
@@ -89,7 +90,7 @@ const calculateMACD = function(data, period) {
 
       resolve(objMACD);
     } catch (err) {
-      console.log("Err calculate_MACD: ", err);
+      console.log(`Err ${strategy} calculate`, err);
       reject(err);
     }
   });
@@ -108,7 +109,7 @@ function log(objMACD) {
       await fs.appendFile(logFile, objMACD.long + "\r\n");
       resolve("OK");
     } catch (err) {
-      console.log("Err logMACD: ", err);
+      console.log(`Err ${strategy} log`, err);
       reject(err);
     }
   });
