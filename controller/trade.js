@@ -12,6 +12,7 @@ const tradeFile = "./logs/aggregateTrades.txt";
 exports.execute = function(oper, pair, arrMin, arrHour, bigTrend) {
   return new Promise(async function(resolve, reject) {
     try {
+      console.log("tradeExecute", oper);
       let result = "no trade";
       users = await modelUsers.getUsers();
       //FALTA BUSCAR O BALANCE DISPONIVEL DA ACCOUNT E TRATAR EM QUANTITY
@@ -41,7 +42,7 @@ exports.execute = function(oper, pair, arrMin, arrHour, bigTrend) {
       }
       resolve(result);
     } catch (err) {
-      console.log("Err trade execute execute: ", err);
+      console.log("Err trade execute : ", err);
       reject(err);
     }
   });
@@ -75,7 +76,7 @@ function log(oper, price, arrMin, arrHour, bigTrend) {
         JSON.stringify(arrHour) +
         " ; " +
         JSON.stringify(bigTrend);
-      console.log(line);
+      console.log("LINE", line);
       await fs.appendFile(tradeFile, line + "\r\n");
       resolve("OK");
     } catch (err) {

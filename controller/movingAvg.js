@@ -2,6 +2,9 @@ const moment = require("moment");
 const _ = require("lodash");
 const fs = require("fs-extra");
 
+const { mongoose } = require("../db/mongoose.js");
+const { User } = require("../models/user.js");
+
 ("use strict");
 
 var _this = this;
@@ -27,13 +30,13 @@ function process(data, params) {
   return new Promise(async function(resolve, reject) {
     try {
       var arr = data.map(item => item.close);
-      var xShortMA = await calculateSMA(arr, 4);
-      var shortMA = await calculateSMA(arr, parseInt(params[0]));
-      var mediumMA = await calculateSMA(arr, parseInt(params[1]));
-      var longMA = await calculateSMA(arr, parseInt(params[2]));
-      await log(shortMA, mediumMA, longMA);
-      result = await applyBusinessRules(xShortMA, shortMA, mediumMA, longMA);
-      resolve(result);
+      var xShortMA = await calculateSMA(arr, params[0]);
+      var shortMA = await calculateSMA(arr, parseInt(params[1]));
+      var mediumMA = await calculateSMA(arr, parseInt(params[2]));
+      var longMA = await calculateSMA(arr, parseInt(params[3]));
+      // await log(shortMA, mediumMA, longMA);
+      // result = await applyBusinessRules(xShortMA, shortMA, mediumMA, longMA);
+      resolve([params, xShortMA, shortMA, mediumMA, longMA]);
     } catch (err) {
       console.log(`Err ${strategy} process:`, err);
       reject(err);
@@ -43,6 +46,7 @@ function process(data, params) {
 
 function applyBusinessRules(xShortMA, shortMA, mediumMA, longMA) {
   return new Promise(async function(resolve, reject) {
+    //Na nova versão tem que carregar os arrays a partir do DB
     try {
       var objMA = [];
       objMA[0] = applyCrossingLines(shortMA, mediumMA, longMA);
@@ -189,5 +193,6 @@ function calculateSMA(data, period) {
 module.exports = {
   execute: execute,
   calculateSMA: calculateSMA,
-  calculateEMA: calculateEMA
+  calculateEMA: calculateEMA,
+  applyBusinessRules: applyBusinessRules
 };

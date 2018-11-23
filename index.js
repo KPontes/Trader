@@ -1,74 +1,74 @@
-require("dotenv").config();
-const _ = require("lodash");
-const express = require("express");
-const bodyParser = require("body-parser");
+#!/usr/bin/env node
 
-const Monitor = require("./controller/monitor.js");
-const trade = require("./controller/trade.js");
+const app = require("./app");
+var express = require("express");
 
-const app = express();
-const port = process.env.PORT;
+// Constants
+const PORT = process.env.PORT || 8080;
+// if you're not using docker-compose for local development, this will default to 8080
+// to prevent non-root permission problems with 80. Dockerfile is set to make this 80
+// because containers don't have that issue :)
 
-app.use(bodyParser.json());
-
-app.get("/express", (req, res) => {
-  res.send({ message: "Welcome to chart-trader Express Server" });
+var server = app.listen(PORT, function() {
+  console.log(`Listening on port ${PORT}`);
 });
 
-process.env["BASEPATH"] = __dirname;
+//
+// need this in docker container to properly exit since node doesn't handle SIGINT/SIGTERM
+// quit on ctrl-c when running docker in terminal
+process.on("SIGINT", function onSigint() {
+  console.info(
+    "Got SIGINT (aka ctrl-c in docker). Graceful shutdown ",
+    new Date().toISOString()
+  );
+  shutdown();
+});
 
-if (process.env.NODE_ENV === "production") {
-  var sslRedirect = require("heroku-ssl-redirect");
-  app.use(sslRedirect());
-  // Express will serve up production assets
-  // like our main.js file, or main.css file!
-  app.use(express.static("client/build"));
+// quit properly on docker stop
+process.on("SIGTERM", function onSigterm() {
+  console.info(
+    "Got SIGTERM (docker container stop). Graceful shutdown ",
+    new Date().toISOString()
+  );
+  shutdown();
+});
 
-  // Express will serve up the index.html file
-  // if it doesn't recognize the route
-  const path = require("path");
-  app.get("*", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "client", "build", "index.html"));
+let sockets = {},
+  nextSocketId = 0;
+server.on("connection", function(socket) {
+  const socketId = nextSocketId++;
+  sockets[socketId] = socket;
+
+  socket.once("close", function() {
+    delete sockets[socketId];
+  });
+});
+
+// shut down server
+function shutdown() {
+  waitForSocketsToClose(10);
+
+  server.close(function onServerClosed(err) {
+    if (err) {
+      console.error(err);
+      process.exitCode = 1;
+    }
+    process.exit();
   });
 }
 
-app.post("/monitor", async (req, res) => {
-  try {
-    var monitor = new Monitor(3000);
-    var result = await monitor.pooling();
-    res.status(200).send(result);
-  } catch (e) {
-    console.log("Error: ", e);
-    res.status(400).send(e);
+function waitForSocketsToClose(counter) {
+  if (counter > 0) {
+    console.log(
+      `Waiting ${counter} more ${
+        counter === 1 ? "seconds" : "second"
+      } for all connections to close...`
+    );
+    return setTimeout(waitForSocketsToClose, 1000, counter - 1);
   }
-});
 
-app.post("/test", async (req, res) => {
-  try {
-    var result = await trade.oneTrade();
-    res.status(200).send(result);
-  } catch (e) {
-    console.log("Error: ", e);
-    res.status(400).send(e);
+  console.log("Forcing all connections to close now");
+  for (var socketId in sockets) {
+    sockets[socketId].destroy();
   }
-});
-
-app.listen(port, () => {
-  console.log("Started on port " + port);
-});
-
-module.exports = { app };
-
-// app.post("/testfunction", async (req, res) => {
-//   try {
-//     const result = await ctrlTest.test(
-//       req.body.contractTitle,
-//       req.body.testStr,
-//       req.body.depositedEther
-//     );
-//     res.status(200).send(result);
-//   } catch (e) {
-//     console.log("Error: ", e);
-//     res.status(400).send(e); //refer to httpstatuses.com
-//   }
-// });
+}

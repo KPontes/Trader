@@ -8,10 +8,9 @@ const stdev = require("../utils/stdev.js");
 ("use strict");
 
 var _this = this;
-const logFile = "./logs/logBBands.txt";
 const strategy = "BBands";
 
-exports.execute = function(data, params) {
+function execute(data, params) {
   return new Promise(async function(resolve, reject) {
     try {
       var result = await process(data, params);
@@ -21,7 +20,7 @@ exports.execute = function(data, params) {
       reject(err);
     }
   });
-};
+}
 
 function process(data, params) {
   return new Promise(async function(resolve, reject) {
@@ -40,26 +39,31 @@ function applyBusinessRules(bbands) {
   return new Promise(async function(resolve, reject) {
     try {
       const recent = -200;
-      var count = 0;
-      const countOverBought = bbands.slice(recent).map(function(element) {
-        if (element.close > element.upper) {
-          count++;
-        }
-        return count;
-      });
-      var count = 0;
-      const countOverSold = bbands.slice(recent).map(function(element) {
-        if (element.close < element.lower) {
-          count++;
-        }
-        return count;
-      });
+
+      const countOverBought = bbands
+        .slice(recent)
+        .map(function(element) {
+          return element.close > element.upper ? 1 : 0;
+        })
+        .reduce((acc, currValue) => {
+          return acc + currValue;
+        }, 0);
+
+      const countOverSold = bbands
+        .slice(recent)
+        .map(function(element) {
+          return element.close < element.lower ? 1 : 0;
+        })
+        .reduce((acc, currValue) => {
+          return acc + currValue;
+        }, 0);
+
       var objBBands = [{ indic: "BBANDS", oper: "none", factor: 0, rules: "" }];
       if (bbands.slice(-1)[0].close > bbands.slice(-1)[0].upper) {
         objBBands[0].oper = "sell";
         objBBands[0].factor = 3;
         objBBands[0].rules = "bbands overbought";
-        if (countOverBought > 2) {
+        if (countOverBought > countOverSold && countOverBought > 3) {
           objBBands[0].oper = "buy"; //walking upper band on trend
           objBBands[0].rules += " / walk upper band";
         }
@@ -68,13 +72,12 @@ function applyBusinessRules(bbands) {
         objBBands[0].oper = "buy";
         objBBands[0].factor = 3;
         objBBands[0].rules = "bbands oversold";
-        if (countOverSold > 2) {
+        if (countOverSold > countOverBought && countOverSold > 3) {
           objBBands[0].oper = "sell"; //walking lower band on trend
           objBBands[0].rules += " / walk lower band";
         }
       }
-
-      resolve(objBBands); //this obj MUST have named properties: oper, factor
+      resolve(objBBands);
     } catch (err) {
       console.log(`Err ${strategy} rules`, err);
       reject(err);
@@ -91,7 +94,7 @@ const calculate = function(data, period) {
       var oBBands = {};
       var bbands = [];
       const arr = data.map(item => item.close);
-      const middle = await mavg.calculateSMA(arr, 20);
+      const middle = await mavg.calculateSMA(arr, period);
       for (var i = 0; i < data.length; i++) {
         oBBands = {
           close: 0,
@@ -111,7 +114,6 @@ const calculate = function(data, period) {
         }
         bbands.push(oBBands);
       }
-      await log(bbands);
 
       resolve(bbands);
     } catch (err) {
@@ -121,14 +123,6 @@ const calculate = function(data, period) {
   });
 };
 
-function log(bbands) {
-  return new Promise(async function(resolve, reject) {
-    try {
-      await fs.outputFile(logFile, JSON.stringify(bbands) + "\r\n");
-      resolve("OK");
-    } catch (err) {
-      console.log(`Err ${strategy} log`, err);
-      reject(err);
-    }
-  });
-}
+module.exports = {
+  calculate: calculate
+};

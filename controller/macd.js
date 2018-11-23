@@ -7,10 +7,9 @@ const mavg = require("./movingAvg.js");
 ("use strict");
 
 var _this = this;
-const logFile = "./logs/logMACD.txt";
 const strategy = "MACD";
 
-exports.execute = function(data, params) {
+function execute(data) {
   return new Promise(async function(resolve, reject) {
     try {
       var result = await process(data, params);
@@ -20,9 +19,9 @@ exports.execute = function(data, params) {
       reject(err);
     }
   });
-};
+}
 
-function process(data, params) {
+function process(data) {
   return new Promise(async function(resolve, reject) {
     try {
       var macdData = await calculate(data);
@@ -72,7 +71,7 @@ function applyBusinessRules(macd) {
   });
 }
 
-const calculate = function(data, period) {
+const calculate = function(data, short, long, signal) {
   return new Promise(async function(resolve, reject) {
     try {
       // MACD Line: (12-day EMA - 26-day EMA)
@@ -80,13 +79,12 @@ const calculate = function(data, period) {
       // MACD Histogram: MACD Line - Signal Line
       const objMACD = {};
       const arr = data.map(item => item.close);
-      objMACD.short = await mavg.calculateEMA(arr, 12);
-      objMACD.long = await mavg.calculateEMA(arr, 26);
+      objMACD.short = await mavg.calculateEMA(arr, short);
+      objMACD.long = await mavg.calculateEMA(arr, long);
       objMACD.macdLine = objMACD.short.map((a, i) =>
         _.round(a - objMACD.long[i], 12)
       );
-      objMACD.signal = await mavg.calculateEMA(objMACD.macdLine, 9);
-      await log(objMACD);
+      objMACD.signal = await mavg.calculateEMA(objMACD.macdLine, signal);
 
       resolve(objMACD);
     } catch (err) {
@@ -96,21 +94,6 @@ const calculate = function(data, period) {
   });
 };
 
-function log(objMACD) {
-  return new Promise(async function(resolve, reject) {
-    try {
-      await fs.outputFile(logFile, "macdData: " + "\r\n");
-      await fs.appendFile(logFile, objMACD.macdLine + "\r\n");
-      await fs.appendFile(logFile, "signal: " + "\r\n");
-      await fs.appendFile(logFile, objMACD.signal + "\r\n");
-      await fs.appendFile(logFile, "short: " + "\r\n");
-      await fs.appendFile(logFile, objMACD.short + "\r\n");
-      await fs.appendFile(logFile, "long: " + "\r\n");
-      await fs.appendFile(logFile, objMACD.long + "\r\n");
-      resolve("OK");
-    } catch (err) {
-      console.log(`Err ${strategy} log`, err);
-      reject(err);
-    }
-  });
-}
+module.exports = {
+  calculate: calculate
+};

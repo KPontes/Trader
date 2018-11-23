@@ -21,27 +21,14 @@ function execute(data, params) {
   });
 }
 
-function trend(data, periods) {
-  return new Promise(async function(resolve, reject) {
-    try {
-      var rsiData = await calculate(data, [14]);
-      objRes = calcTrend(rsiData, periods);
-      resolve(objRes);
-    } catch (err) {
-      console.log(`Err ${strategy} trend`, err);
-      reject(err);
-    }
-  });
-}
-
 function process(data, params) {
   return new Promise(async function(resolve, reject) {
     try {
       var rsiData = await calculate(data, params);
       await log(rsiData);
-      var top = parseInt(params[1]);
-      var bottom = parseInt(params[2]);
-      var recent = parseInt(params[3]);
+      var recent = parseInt(params[1]);
+      var top = parseInt(params[2]);
+      var bottom = parseInt(params[3]);
       result = await applyBusinessRules(rsiData, top, bottom, recent);
       resolve(result);
     } catch (err) {
@@ -85,7 +72,7 @@ function applyBusinessRules(rsiData, top, bottom, recent) {
         objRSI[0].rules = "60>rsi>40";
         if (
           oTrend.recentGains > oTrend.recentLosses &&
-          oTrend.countGains > oTrend.period * 0.65
+          oTrend.countGains > -(oTrend.last * 0.65)
         ) {
           objRSI[0].oper = "buy";
           objRSI[0].factor = 2;
@@ -93,7 +80,7 @@ function applyBusinessRules(rsiData, top, bottom, recent) {
         }
         if (
           oTrend.recentGains < oTrend.recentLosses &&
-          oTrend.countGains < oTrend.period * 0.35
+          oTrend.countGains < -(oTrend.last * 0.35)
         ) {
           objRSI[0].oper = "sell";
           objRSI[0].factor = 2;
@@ -109,31 +96,49 @@ function applyBusinessRules(rsiData, top, bottom, recent) {
   });
 }
 
+function trend(data, periods) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      var rsiData = await calculate(data, [14]); //first in params
+      objRes = calcTrend(rsiData, periods);
+      resolve(objRes);
+    } catch (err) {
+      console.log(`Err ${strategy} trend`, err);
+      reject(err);
+    }
+  });
+}
+
 function calcTrend(rsiData, recent) {
-  var count = 0;
   var countGains = rsiData
     .slice(recent)
     .map(function(element) {
       return element.gain > 0 ? 1 : 0;
     })
-    .reduce((acc, currValue) => acc + currValue, 0);
+    .reduce((acc, currValue) => {
+      return acc + currValue;
+    }, 0);
 
   var recentGains = rsiData
     .slice(recent)
     .map(function(element) {
       return element.gain;
     })
-    .reduce((acc, currValue) => acc + currValue, 0);
+    .reduce((acc, currValue) => {
+      return acc + currValue;
+    }, 0);
 
   var recentLosses = rsiData
     .slice(recent)
     .map(function(element) {
       return element.loss;
     })
-    .reduce((acc, currValue) => acc + currValue, 0);
+    .reduce((acc, currValue) => {
+      return acc + currValue;
+    }, 0);
 
   const objRes = {
-    period: recent,
+    last: recent,
     countGains: countGains,
     gains: _.round(recentGains, 12),
     losses: _.round(recentLosses, 12)
@@ -156,11 +161,9 @@ function log(rsiData) {
   });
 }
 
-const calculate = function(data, params) {
+const calculate = function(data, period) {
   return new Promise(async function(resolve, reject) {
     try {
-      //initial period calc
-      period = parseInt(params[0]);
       var iniGain = 0;
       var iniLoss = 0;
       var rsiData = [];
@@ -226,6 +229,7 @@ function createRSIObj(
 }
 
 module.exports = {
+  calculate: calculate,
   execute: execute,
   trend: trend
 };
