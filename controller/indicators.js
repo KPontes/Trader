@@ -1,4 +1,3 @@
-const { mongoose } = require("../db/mongoose.js");
 const { Indicator } = require("../models/indicator.js");
 const { IndicatorLoader, Base } = require("../models/indicatorLoader.js");
 
@@ -52,26 +51,37 @@ function saveItem(_name, _period, _params) {
   });
 }
 
-function saveLoad(_exchange, _pair, _loadPeriod, loader) {
+function saveLoad(_exchange, _pair, _loadPeriod, _name, loader) {
   return new Promise(async function(resolve, reject) {
     try {
-      var iLoader = new IndicatorLoader({
-        klines: [Base],
-        sma: [Base],
-        ema: [Base],
-        rsi: [Base],
-        macd: [Base],
-        bbands: [Base]
-      });
+      var iLoader = new IndicatorLoader();
+      console.log("begin saveLoad");
       iLoader.symbol = _pair;
       iLoader.period = _loadPeriod;
       iLoader.exchange = _exchange;
-      iLoader.klines = await prepareSaveKlines(loader.klines);
-      iLoader.sma = await prepareSave("sma", loader.sma);
-      iLoader.ema = await prepareSave("ema", loader.ema);
-      iLoader.rsi = await prepareSave("rsi", loader.rsi);
-      iLoader.macd = await prepareSave("macd", loader.macd);
-      iLoader.bbands = await prepareSave("bbands", loader.bbands);
+      iLoader.name = _name;
+      switch (_name) {
+        case "KLines":
+          iLoader.docs = await prepareSaveKlines(loader.klines);
+          break;
+        case "SMA":
+          iLoader.docs = await prepareSave("sma", loader.sma);
+          break;
+        case "EMA":
+          iLoader.docs = await prepareSave("ema", loader.ema);
+          break;
+        case "RSI":
+          iLoader.docs = await prepareSave("rsi", loader.rsi);
+          break;
+        case "MACD":
+          iLoader.docs = await prepareSave("macd", loader.macd);
+          break;
+        case "BBANDS":
+          iLoader.docs = await prepareSave("bbands", loader.bbands);
+          break;
+        default:
+          console.log("wrong name on saveLoad", _name);
+      }
       await iLoader.save();
       resolve(iLoader);
     } catch (err) {
@@ -86,7 +96,7 @@ function prepareSave(name, data) {
     try {
       var arr = [];
       for (let i = 0; i < data.length; i++) {
-        let newDoc = new Base();
+        let newDoc = {};
         newDoc.params = data[i].params;
         newDoc.data = data[i].data;
         arr.push(newDoc);
@@ -103,7 +113,7 @@ function prepareSaveKlines(klData) {
   return new Promise(async function(resolve, reject) {
     try {
       var arr = [];
-      let newDoc = new Base();
+      let newDoc = {};
       newDoc.params = "1";
       newDoc.data = klData.data;
       arr.push(newDoc);

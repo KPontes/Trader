@@ -2,15 +2,32 @@ require("dotenv").config();
 const _ = require("lodash");
 const express = require("express");
 const bodyParser = require("body-parser");
+const { mongoose } = require("./db/mongoose.js");
+const MongoClient = require("mongodb").MongoClient;
 
 const Monitor = require("./controller/monitor.js");
 const ctrIndicators = require("./controller/indicators.js");
+// Create a new MongoClient
+// const MONGODB_URI = "mongodb://admin:dev123PWD@mymongo:27017";
+// let db;
+// const client = new MongoClient(MONGODB_URI);
+// setTimeout(() => {
+//   client.connect(function(err) {
+//     if (err) {
+//       return console.error(err);
+//     }
+//     console.log("Connected MongoClient to database");
+//     db = client.db("AperiumTrader");
+//   });
+// }, 2000);
+
 const app = express();
 
 app.use(bodyParser.json());
 
 app.get("/express", (req, res) => {
-  res.send({ message: "Welcome to chart-trader Express Server" });
+  console.log("welcome message");
+  res.send({ message: "Welcome to docker chart-trader Express Server" });
 });
 
 process.env["BASEPATH"] = __dirname;
@@ -25,9 +42,9 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
+var monitor = new Monitor(30000);
 app.post("/monitor", async (req, res) => {
   try {
-    var monitor = new Monitor(5000);
     var result = await monitor.pooling();
     res.status(200).send(result);
   } catch (e) {
@@ -61,21 +78,31 @@ app.post("/addindicators", async (req, res) => {
   }
 });
 
-app.get("/healthz", function(req, res) {
-  // do app logic here to determine if app is truly healthy
-  // you should return 200 if healthy, and anything else will fail
-  // if you want, you should be able to restrict this to localhost (include ipv4 and ipv6)
-  res.status(200).send("I am happy and healthy\n");
+app.post("/stop", async (req, res) => {
+  try {
+    var result = monitor.stop();
+    res.send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
 });
 
-app.post("/test", async (req, res) => {
+app.post("/oneload", async (req, res) => {
   try {
-    var result = await ctrIndicators.saveLoad();
+    var result = await monitor.executeLoader();
     res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);
     res.status(400).send(e);
   }
+});
+
+app.get("/healthz", function(req, res) {
+  // do app logic here to determine if app is truly healthy
+  // you should return 200 if healthy, and anything else will fail
+  // if you want, you should be able to restrict this to localhost (include ipv4 and ipv6)
+  res.status(200).send("I am happy and healthy\n");
 });
 
 module.exports = app;

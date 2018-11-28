@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 8080;
 // because containers don't have that issue :)
 
 var server = app.listen(PORT, function() {
-  console.log(`Listening on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
 
 //

@@ -2,9 +2,6 @@ const moment = require("moment");
 const _ = require("lodash");
 const fs = require("fs-extra");
 
-const { mongoose } = require("../db/mongoose.js");
-const { User } = require("../models/user.js");
-
 ("use strict");
 
 var _this = this;

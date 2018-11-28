@@ -15,18 +15,21 @@ EXPOSE $PORT
 # but pin this version for the best stability
 RUN npm i npm@latest -g
 
-# install dependencies first, in a different location for easier app bind mounting for local development
-WORKDIR /opt
-COPY package.json package-lock.json* ./
+# install dependencies first
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+COPY package.json ./
+COPY package-lock.json* ./
 RUN npm install --no-optional && npm cache clean --force
-ENV PATH /opt/node_modules/.bin:$PATH
+
+ENV PATH /usr/src/app/node_modules/.bin:$PATH
 
 # check every 30s to ensure this service returns HTTP 200
 HEALTHCHECK --interval=30s CMD node healthcheck.js
 
 # copy in our source code last, as it changes the most
-WORKDIR /opt/app
-COPY . /opt/app
+WORKDIR /usr/src/app
+COPY . .
 
 # the official node image provides an unprivileged user as a security best practice
 # https://github.com/nodejs/docker-node/blob/master/docs/BestPractices.md#non-root-user
@@ -36,4 +39,6 @@ USER node
 # so that signals are passed properly. Note the code in index.js is needed to catch Docker signals
 # using node here is still more graceful stopping then npm with --init afaik
 # I still can't come up with a good production way to run with npm and graceful shutdown
-CMD [ "node", "./index.js" ]
+# ==> CMD [ "node", "./index.js" ]
+["node", "./index.js", "max_old_space_size=2048"]
+# CMD ["npm", "start"]

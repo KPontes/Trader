@@ -1,10 +1,5 @@
 const mongoose = require("mongoose");
 
-var BaseSchema = new mongoose.Schema({
-  params: String,
-  data: []
-});
-
 var IndicatorLoaderSchema = new mongoose.Schema(
   {
     exchange: {
@@ -23,13 +18,18 @@ var IndicatorLoaderSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    klines: [BaseSchema],
-    rsi: [BaseSchema],
-    sma: [BaseSchema],
-    ema: [BaseSchema],
-    rsi: [BaseSchema],
-    macd: [BaseSchema],
-    bbands: [BaseSchema]
+    name: {
+      type: String,
+      required: true,
+      minlength: 3,
+      trim: true
+    },
+    docs: [
+      {
+        params: String,
+        data: []
+      }
+    ]
   },
   {
     timestamps: true
@@ -37,9 +37,8 @@ var IndicatorLoaderSchema = new mongoose.Schema(
 );
 
 var IndicatorLoader = mongoose.model("IndicatorLoader", IndicatorLoaderSchema);
-var Base = mongoose.model("Base", BaseSchema);
 
-module.exports = { IndicatorLoader, Base };
+module.exports = { IndicatorLoader };
 
 // var KLineDataSchema = new mongoose.Schema({
 //   openTime: Number,

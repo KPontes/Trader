@@ -52,16 +52,17 @@ Monitor.prototype.executeLoader = function() {
       await IndicatorLoader.deleteMany();
       const timer = ["1m", "1h"];
       const exchanges = ["binance"];
-      const pairs = ["XRPUSDT", "ETHUSDT", "BTCUSDT"];
+      //const pairs = ["XRPUSDT", "ETHUSDT", "BTCUSDT"];
+      const pairs = ["XRPUSDT"];
       for (let pair of pairs) {
-        for (let tmp of timer) {
-          let data = await exchange.getKLines(exchanges[0], pair, tmp);
+        for (let time of timer) {
+          let data = await exchange.getKLines(exchanges[0], pair, time);
           if (data.length < 499) throw { code: 300, msg: "no data" };
           if (data.code) {
             console.log("Err executeLoader", data.message); //returned an error object
             throw data.message;
           }
-          await _this.generateIndicators(exchanges[0], pair, data, tmp);
+          await _this.generateIndicators(exchanges[0], pair, data, time);
         }
       }
       console.log("OK executeLoader");
@@ -73,16 +74,11 @@ Monitor.prototype.executeLoader = function() {
   });
 };
 
-Monitor.prototype.generateIndicators = function(
-  _exchange,
-  _pair,
-  _lastData,
-  _period
-) {
+Monitor.prototype.generateIndicators = function(_exchg, _pair, _candles, _per) {
   var _this = this;
   return new Promise(async function(resolve, reject) {
     try {
-      var loader = {
+      let loader = {
         sma: [],
         ema: [],
         rsi: [],
@@ -90,45 +86,47 @@ Monitor.prototype.generateIndicators = function(
         bbands: [],
         klines: []
       };
-      const arr = _lastData.map(item => item.close);
-      indicators = await Indicator.find({ period: _period });
-      for (let element of indicators) {
-        if (element.name === "SMA" || element.name === "EMA") {
-          for (let value of element.params) {
-            var newItem = await _this.generateMAdata(element.name, arr, value);
-            element.name === "SMA"
+      const arr = _candles.map(item => item.close);
+      indicators = await Indicator.find({ period: _per });
+      for (let it of indicators) {
+        if (it.name === "SMA" || it.name === "EMA") {
+          for (let value of it.params) {
+            var newItem = await _this.generateMAdata(it.name, arr, value);
+            it.name === "SMA"
               ? loader.sma.push(newItem)
               : loader.ema.push(newItem);
           }
         }
-        if (element.name === "KLines") {
-          loader.klines.data = _lastData;
+        if (it.name === "KLines") {
+          loader.klines.data = _candles;
         }
-        if (element.name === "RSI") {
-          for (let value of element.params) {
-            var newItem = await _this.generateRSIdata(_lastData, value);
+        if (it.name === "RSI") {
+          for (let value of it.params) {
+            var newItem = await _this.generateRSIdata(_candles, value);
             loader.rsi.push(newItem);
           }
         }
-        if (element.name === "MACD") {
+        if (it.name === "MACD") {
           let cont = 0; //macd uses groups of 3 params for calculation
-          for (let value of element.params) {
+          for (let value of it.params) {
             cont += 1;
             if (cont % 3 === 0) {
-              let params = element.params.slice(cont - 3, cont);
-              var newItem = await _this.generateMACDdata(_lastData, params);
+              let params = it.params.slice(cont - 3, cont);
+              var newItem = await _this.generateMACDdata(_candles, params);
               loader.macd.push(newItem);
             }
           }
         }
-        if (element.name === "BBANDS") {
-          for (let value of element.params) {
-            var newItem = await _this.generateBBandsData(_lastData, value);
+        if (it.name === "BBANDS") {
+          for (let value of it.params) {
+            var newItem = await _this.generateBBandsData(_candles, value);
             loader.bbands.push(newItem);
           }
         }
+        await ctrIndicators.saveLoad(_exchg, _pair, _per, it.name, loader);
       }
-      newLoad = await ctrIndicators.saveLoad(_exchange, _pair, _period, loader);
+
+      // newLoad = await ctrIndicators.saveLoad(_exchange, _pair, _period, loader);
       resolve("OK");
     } catch (err) {
       console.log("Err processIndicators: ", err);
@@ -223,6 +221,5 @@ function logErr(obj) {
 
 Monitor.prototype.stop = function() {
   this.stopExecute = true;
-  // clearInterval(this.intervalObject);
-  console.log("stopTrade");
+  return "OK";
 };
