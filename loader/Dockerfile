@@ -19,7 +19,7 @@ RUN npm i npm@latest -g
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 COPY package.json ./
-COPY package-lock.json* ./
+# COPY package-lock.json* ./
 RUN npm install --no-optional && npm cache clean --force
 
 ENV PATH /usr/src/app/node_modules/.bin:$PATH
@@ -39,6 +39,5 @@ USER node
 # so that signals are passed properly. Note the code in index.js is needed to catch Docker signals
 # using node here is still more graceful stopping then npm with --init afaik
 # I still can't come up with a good production way to run with npm and graceful shutdown
-# ==> CMD [ "node", "./index.js" ]
-["node", "./index.js", "max_old_space_size=2048"]
+CMD ["node", "./index.js", "max_old_space_size=2048"]
 # CMD ["npm", "start"]

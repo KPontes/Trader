@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-var IndicatorLoaderSchema = new mongoose.Schema(
+var ILoaderSchema = new mongoose.Schema(
   {
     exchange: {
       type: String,
@@ -36,9 +36,9 @@ var IndicatorLoaderSchema = new mongoose.Schema(
   }
 );
 
-var IndicatorLoader = mongoose.model("IndicatorLoader", IndicatorLoaderSchema);
+var ILoader = mongoose.model("ILoader", ILoaderSchema);
 
-module.exports = { IndicatorLoader };
+module.exports = { ILoader };
 
 // var KLineDataSchema = new mongoose.Schema({
 //   openTime: Number,

@@ -17,34 +17,49 @@ services:
     networks:
       - ctrader
 
-  mynode:
-    container_name: aperium-node
+  loader-node:
+    container_name: aperium-loader
     build:
-      context: .
+      context: ./loader
       args:
         - NODE_ENV=development
-    image: aperium-trader
-    mem_limit: 3gb
-    memswap_limit: 2gb
+    image: aperium-loader
+    mem_limit: 2gb
+    memswap_limit: 1gb
     mem_reservation: 1gb
-    # restart: always
     ports:
       - "5000:5000"
     volumes:
-      - .:/usr/src/app
+      - ./loader:/usr/src/app
     environment:
       - NODE_ENV=development
     command: node --max-old-space-size=2048 index.js
-      #npm run start
-#    healthcheck:
-#      disable: true
+    networks:
+      - ctrader
+
+  planner-node:
+    container_name: aperium-planner
+    build:
+      context: ./planner
+      args:
+        - NODE_ENV=development
+    image: aperium-planner
+    mem_limit: 2gb
+    memswap_limit: 1gb
+    mem_reservation: 1gb
+    ports:
+      - "6000:6000"
+    volumes:
+      - ./planner:/usr/src/app
+    environment:
+      - NODE_ENV=development
+    command: node --max-old-space-size=2048 index.js
     networks:
       - ctrader
 
   mongo-express:
     container_name: aperium-mongo-express
     image: mongo-express
-    # restart: always
     ports:
       - 8081:8081
     environment:

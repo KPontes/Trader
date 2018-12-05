@@ -2,7 +2,10 @@
 
 # dependencies
 /node_modules
-/client/node_modules
+/loader/node_modules
+/loader/.env
+/planner/node_modules
+/planner/.env
 
 # testing
 /coverage
@@ -11,6 +14,7 @@
 /build
 
 # misc
+.dockerignore
 .DS_Store
 .env
 .env.local
@@ -18,7 +22,10 @@
 .env.test.local
 .env.production.local
 package-lock.json
-/client/package-lock.json
+/loader/package-lock.json
+/loader/logs
+/planner/package-lock.json
+/planner/logs
 /logs
 npm-debug.log*
 yarn-debug.log*

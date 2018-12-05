@@ -2,19 +2,17 @@ const intervalObj = require("interval-promise");
 const moment = require("moment");
 const fs = require("fs-extra");
 
+const { ILoader } = require("../models/indicatorLoader.js");
 const { Indicator } = require("../models/indicator.js");
-const { IndicatorLoader } = require("../models/indicatorLoader.js");
+const { Signalizer } = require("../models/signalizer.js");
 const exchange = require("./exchange.js");
 const mavg = require("./movingAvg.js");
 const rsi = require("./rsi.js");
 const bbands = require("./bbands.js");
 const macd = require("./macd.js");
-const klines = require("./klines.js");
 const ctrIndicators = require("./indicators.js");
 
 ("use strict");
-
-const logFile = "./logs/generalErrLog.txt";
 
 module.exports = Monitor;
 
@@ -48,8 +46,9 @@ Monitor.prototype.executeLoader = function() {
   var _this = this;
   return new Promise(async function(resolve, reject) {
     try {
-      //await IndicatorLoader.collection.drop();
-      await IndicatorLoader.deleteMany();
+      await Signalizer.upsert("status", "loading");
+      //await iLoader.collection.drop();
+      await ILoader.deleteMany();
       const timer = ["1m", "1h"];
       const exchanges = ["binance"];
       //const pairs = ["XRPUSDT", "ETHUSDT", "BTCUSDT"];
@@ -65,6 +64,8 @@ Monitor.prototype.executeLoader = function() {
           await _this.generateIndicators(exchanges[0], pair, data, time);
         }
       }
+      await Signalizer.upsert("status", "ready");
+
       console.log("OK executeLoader");
       resolve("OK executeLoader");
     } catch (err) {
@@ -129,7 +130,7 @@ Monitor.prototype.generateIndicators = function(_exchg, _pair, _candles, _per) {
       // newLoad = await ctrIndicators.saveLoad(_exchange, _pair, _period, loader);
       resolve("OK");
     } catch (err) {
-      console.log("Err processIndicators: ", err);
+      console.log("Err generateIndicators: ", err);
       reject(err);
     }
   });
@@ -199,25 +200,6 @@ Monitor.prototype.generateBBandsData = function(data, value) {
     }
   });
 };
-
-function logErr(obj) {
-  return new Promise(async function(resolve, reject) {
-    try {
-      var line =
-        obj.code.toString() +
-        " , " +
-        obj.msg +
-        " , " +
-        moment().format("YYYYMMDD:HHmmss");
-      console.log(line);
-      await fs.appendFile(logFile, line + "\r\n");
-      resolve("OK");
-    } catch (err) {
-      console.log("Err logMonitor: ", err);
-      reject(err);
-    }
-  });
-}
 
 Monitor.prototype.stop = function() {
   this.stopExecute = true;

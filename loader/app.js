@@ -1,25 +1,11 @@
+//require("dotenv").config({ path: "~/Projects/chart-trader/" });
 require("dotenv").config();
-const _ = require("lodash");
 const express = require("express");
 const bodyParser = require("body-parser");
 const { mongoose } = require("./db/mongoose.js");
-const MongoClient = require("mongodb").MongoClient;
 
 const Monitor = require("./controller/monitor.js");
 const ctrIndicators = require("./controller/indicators.js");
-// Create a new MongoClient
-// const MONGODB_URI = "mongodb://admin:dev123PWD@mymongo:27017";
-// let db;
-// const client = new MongoClient(MONGODB_URI);
-// setTimeout(() => {
-//   client.connect(function(err) {
-//     if (err) {
-//       return console.error(err);
-//     }
-//     console.log("Connected MongoClient to database");
-//     db = client.db("AperiumTrader");
-//   });
-// }, 2000);
 
 const app = express();
 
@@ -31,7 +17,7 @@ app.get("/express", (req, res) => {
 });
 
 process.env["BASEPATH"] = __dirname;
-
+//console.log("process.env", process.env);
 if (process.env.NODE_ENV === "production") {
   app.use(express.static("client/build"));
   // Express will serve up the index.html file

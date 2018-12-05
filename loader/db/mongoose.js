@@ -1,10 +1,18 @@
 var mongoose = require("mongoose");
 
-// mongodb://user:pwd@url:port/dbname
-const REMOTE_MONGO =
-  "mongodb://dev:1234@ds125628.mlab.com:25628/ponteskl-futuresprd";
-const LOCAL_MONGO = process.env.MONGODB_URI; //was set through config.json
-const MONGO_URI = process.env.PORT == 5000 ? LOCAL_MONGO : REMOTE_MONGO;
+const {
+  MONGO_USERNAME,
+  MONGO_PASSWORD,
+  MONGO_HOSTNAME,
+  MONGO_PORT,
+  MONGO_DATABASE_NAME
+} = process.env;
+
+// Connection URL Docker
+const MONGO_URI = `mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOSTNAME}:${MONGO_PORT}/${MONGO_DATABASE_NAME}`;
+// Connection URL VM
+//const MONGO_URI = `mongodb://localhost:${MONGO_PORT}/${MONGO_DATABASE_NAME}`; //connect into local VM
+//console.log("MONGO_URI", MONGO_URI);
 mongoose.Promise = global.Promise;
 const options = {
   reconnectTries: 10, // Never stop trying to reconnect
@@ -13,7 +21,7 @@ const options = {
   // If not connected, return errors immediately rather than waiting for reconnect
   bufferMaxEntries: 0,
   connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
-  socketTimeoutMS: 35000, // Close sockets after 45 seconds of inactivity
+  socketTimeoutMS: 35000, // Close sockets after 35 seconds of inactivity
   family: 4 // Use IPv4, skip trying IPv6
 };
 mongoose.connect(MONGO_URI, options);

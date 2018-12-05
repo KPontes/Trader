@@ -1,5 +1,5 @@
 const { Indicator } = require("../models/indicator.js");
-const { IndicatorLoader, Base } = require("../models/indicatorLoader.js");
+const { ILoader } = require("../models/indicatorLoader.js");
 
 ("use strict");
 
@@ -54,8 +54,7 @@ function saveItem(_name, _period, _params) {
 function saveLoad(_exchange, _pair, _loadPeriod, _name, loader) {
   return new Promise(async function(resolve, reject) {
     try {
-      var iLoader = new IndicatorLoader();
-      console.log("begin saveLoad");
+      var iLoader = new ILoader();
       iLoader.symbol = _pair;
       iLoader.period = _loadPeriod;
       iLoader.exchange = _exchange;
