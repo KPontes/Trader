@@ -32,7 +32,7 @@ Monitor.prototype.pooling = async function() {
         }
         var result = await _this.executeLoader();
       } catch (err) {
-        console.log("Err poolingMonitor", err.message);
+        console.log("Err loader pooling", err.message);
         logErr(err);
         //_this.stopExecute = true;
       }
@@ -66,7 +66,7 @@ Monitor.prototype.executeLoader = function() {
       }
       await Signalizer.upsert("status", "ready");
 
-      console.log("OK executeLoader");
+      console.log("OK executeLoader " + moment().format("YYYYMMDD:HHmmss"));
       resolve("OK executeLoader");
     } catch (err) {
       console.log("Err executeLoader: ", err);

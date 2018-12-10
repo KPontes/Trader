@@ -1,40 +1,67 @@
-const intervalObj = require("interval-promise");
-const moment = require("moment");
-const fs = require("fs-extra");
-
-const { ILoader } = require("../models/indicatorLoader.js");
-const { Indicator } = require("../models/indicator.js");
 const { Signalizer } = require("../models/signalizer.js");
 const mavg = require("../controller/movingAvg.js");
 const rsi = require("../controller/rsi.js");
+const bbands = require("../controller/bbands.js");
+const macd = require("../controller/macd.js");
+const klines = require("../controller/klines.js");
+const strategy = require("../controller/strategy.js");
 
 ("use strict");
 
-const strategy = "strategyOne";
+const strategyName = "StrategyOne";
 
 module.exports = StrategyOne;
 
 function StrategyOne(params) {
+  //config params must be always in array format
   this.config = {
     sma: [4, 7, 25, 99],
-    rsi: [14, 30, 70, 50]
+    rsi: [14, 30, 70, 7],
+    bbands: [20, 100],
+    macd: [12, 26, 9],
+    klines: [0.005]
   };
+}
+
+function findDocs(arr, value) {
+  let result = arr.find(function(element) {
+    if (parseInt(element.params) === value) {
+      return element.data;
+    }
+  });
+  return result ? result.data : undefined;
 }
 
 StrategyOne.prototype.generate = function(exchange, pair, period) {
   var _this = this;
   return new Promise(async function(resolve, reject) {
     try {
-      let result = [];
-      await Signalizer.upsert("strategy01", "loading");
+      await Signalizer.upsert(strategyName, "loading");
       //await Strategy.deleteMany({ name: "strategyOne" });
       const SMA = await _this.processSMA(exchange, pair, period);
       const RSI = await _this.processRSI(exchange, pair, period);
-
-      console.log(SMA.concat(RSI));
-      await Signalizer.upsert("strategy01", "ready");
-      console.log("OK strat01 generate");
-      resolve("OK strategyOne");
+      const BBANDS = await _this.processBBands(exchange, pair, period);
+      const MACD = await _this.processMACD(exchange, pair, period);
+      const KLINES = await _this.processKLines(exchange, pair, period);
+      const result = SMA.concat(RSI)
+        .concat(BBANDS)
+        .concat(MACD)
+        .concat(KLINES);
+      const summary = await _this.summarize(exchange, pair, period, result);
+      await strategy.saveResult(
+        strategyName,
+        exchange,
+        pair,
+        period,
+        _this.config,
+        result,
+        summary
+      );
+      await Signalizer.upsert(strategyName, "ready");
+      console.log(result);
+      console.log(summary);
+      console.log("OK generate " + strategyName);
+      resolve("OK " + strategyName);
     } catch (err) {
       console.log("Err generate: ", err);
       reject(err);
@@ -42,23 +69,51 @@ StrategyOne.prototype.generate = function(exchange, pair, period) {
   });
 };
 
+StrategyOne.prototype.summarize = function(exchange, pair, period, lastResult) {
+  var _this = this;
+  return new Promise(async function(resolve, reject) {
+    try {
+      summary = {
+        countBuy: 0,
+        countSell: 0,
+        countNone: 0,
+        factorBuy: 0,
+        factorSell: 0,
+        factorNone: 0
+      };
+      lastResult.map(element => {
+        switch (element.oper) {
+          case "buy":
+            summary.countBuy += 1;
+            summary.factorBuy += element.factor;
+            break;
+          case "sell":
+            summary.countSell += 1;
+            summary.factorSell += element.factor;
+            break;
+          default:
+            summary.countNone += 1;
+            summary.factorNone += element.factor;
+            break;
+        }
+      });
+      resolve(summary);
+    } catch (err) {
+      console.log(`Err ${strategyName} summarize:`, err);
+      reject(err);
+    }
+  });
+};
+
 StrategyOne.prototype.processSMA = function(exchange, pair, period) {
   var _this = this;
-  function findSMA(arr, value) {
-    let result = arr.docs.find(function(element) {
-      if (parseInt(element.params) === value) {
-        return element.data;
-      }
-    });
-    return result.data || undefined;
-  }
   return new Promise(async function(resolve, reject) {
     try {
       const arr = await mavg.getData(exchange, pair, period);
-      const xShortMA = findSMA(arr, _this.config.sma[0]);
-      const shortMA = findSMA(arr, _this.config.sma[1]);
-      const mediumMA = findSMA(arr, _this.config.sma[2]);
-      const longMA = findSMA(arr, _this.config.sma[3]);
+      const xShortMA = findDocs(arr.docs, _this.config.sma[0]);
+      const shortMA = findDocs(arr.docs, _this.config.sma[1]);
+      const mediumMA = findDocs(arr.docs, _this.config.sma[2]);
+      const longMA = findDocs(arr.docs, _this.config.sma[3]);
       if (!xShortMA || !shortMA || !mediumMA || !longMA) {
         throw "Configured MA params not found on load";
       }
@@ -67,7 +122,7 @@ StrategyOne.prototype.processSMA = function(exchange, pair, period) {
       obj[1] = mavg.applyTrend(xShortMA);
       resolve(obj); //this obj MUST have named properties: oper, factor
     } catch (err) {
-      console.log(`Err ${strategy} processSMA:`, err);
+      console.log(`Err ${strategyName} processSMA:`, err);
       reject(err);
     }
   });
@@ -75,92 +130,95 @@ StrategyOne.prototype.processSMA = function(exchange, pair, period) {
 
 StrategyOne.prototype.processRSI = function(exchange, pair, period) {
   var _this = this;
-  function findRSI(arr, value) {
-    let result = arr.docs.find(function(element) {
-      if (parseInt(element.params) === value) {
-        return element.data;
-      }
-    });
-    return result.data || undefined;
-  }
   return new Promise(async function(resolve, reject) {
     try {
       const arr = await rsi.getData(exchange, pair, period);
-      const rsiData = findRSI(arr, _this.config.rsi[0]);
-      if (!rsiData) {
+      const searchData = findDocs(arr.docs, _this.config.rsi[0]);
+      if (!searchData) {
         throw "Configured RSI params not found on load";
       }
       const result = await rsi.applyBusinessRules(
-        rsiData,
-        _this.config.sma[1],
-        _this.config.sma[2],
-        _this.config.sma[3]
+        searchData,
+        _this.config.rsi[1],
+        _this.config.rsi[2],
+        _this.config.rsi[3]
       );
       resolve(result);
     } catch (err) {
-      console.log(`Err ${strategy} processRSI:`, err);
+      console.log(`Err ${strategyName} processRSI:`, err);
       reject(err);
     }
   });
 };
 
-// StrategyOne.prototype.generateIndicators = function(_exchg, _pair, _candles, _per) {
-//   var _this = this;
-//   return new Promise(async function(resolve, reject) {
-//     try {
-//       let loader = {
-//         sma: [],
-//         ema: [],
-//         rsi: [],
-//         macd: [],
-//         bbands: [],
-//         klines: []
-//       };
-//       const arr = _candles.map(item => item.close);
-//       indicators = await Indicator.find({ period: _per });
-//       for (let it of indicators) {
-//         if (it.name === "SMA" || it.name === "EMA") {
-//           for (let value of it.params) {
-//             var newItem = await _this.generateMAdata(it.name, arr, value);
-//             it.name === "SMA"
-//               ? loader.sma.push(newItem)
-//               : loader.ema.push(newItem);
-//           }
-//         }
-//         if (it.name === "KLines") {
-//           loader.klines.data = _candles;
-//         }
-//         if (it.name === "RSI") {
-//           for (let value of it.params) {
-//             var newItem = await _this.generateRSIdata(_candles, value);
-//             loader.rsi.push(newItem);
-//           }
-//         }
-//         if (it.name === "MACD") {
-//           let cont = 0; //macd uses groups of 3 params for calculation
-//           for (let value of it.params) {
-//             cont += 1;
-//             if (cont % 3 === 0) {
-//               let params = it.params.slice(cont - 3, cont);
-//               var newItem = await _this.generateMACDdata(_candles, params);
-//               loader.macd.push(newItem);
-//             }
-//           }
-//         }
-//         if (it.name === "BBANDS") {
-//           for (let value of it.params) {
-//             var newItem = await _this.generateBBandsData(_candles, value);
-//             loader.bbands.push(newItem);
-//           }
-//         }
-//         await ctrIndicators.saveLoad(_exchg, _pair, _per, it.name, loader);
-//       }
-//
-//       // newLoad = await ctrIndicators.saveLoad(_exchange, _pair, _period, loader);
-//       resolve("OK");
-//     } catch (err) {
-//       console.log("Err generateIndicators: ", err);
-//       reject(err);
-//     }
-//   });
-// };
+StrategyOne.prototype.processBBands = function(exchange, pair, period) {
+  var _this = this;
+  return new Promise(async function(resolve, reject) {
+    try {
+      const arr = await bbands.getData(exchange, pair, period);
+      const searchData = findDocs(arr.docs, _this.config.bbands[0]);
+      if (!searchData) {
+        throw "Configured BBANDS params not found on load";
+      }
+      const result = await bbands.applyBusinessRules(
+        searchData,
+        _this.config.bbands[1]
+      );
+      resolve(result);
+    } catch (err) {
+      console.log(`Err ${strategyName} processBBands:`, err);
+      reject(err);
+    }
+  });
+};
+
+StrategyOne.prototype.processMACD = function(exchange, pair, period) {
+  var _this = this;
+
+  function findDocsMACD(arr, value) {
+    //macd params is a comma separated string
+    let result = arr.find(function(element) {
+      if (element.params === value) {
+        return element.data;
+      }
+    });
+    return result ? result.data : undefined;
+  }
+  return new Promise(async function(resolve, reject) {
+    try {
+      const arr = await macd.getData(exchange, pair, period);
+      const searchParam = _this.config.macd.join(",");
+      const searchData = findDocsMACD(arr.docs, searchParam);
+      if (!searchData) {
+        throw "Configured MACD params not found on load";
+      }
+      const result = await macd.applyBusinessRules(searchData[0]);
+      resolve(result);
+    } catch (err) {
+      console.log(`Err ${strategyName} processMACD:`, err);
+      reject(err);
+    }
+  });
+};
+
+StrategyOne.prototype.processKLines = function(exchange, pair, period) {
+  var _this = this;
+  return new Promise(async function(resolve, reject) {
+    try {
+      const arr = await klines.getData(exchange, pair, period);
+      //unique fixed search parameter as klines dont change with parameters
+      const searchData = findDocs(arr.docs, 1);
+      if (!searchData) {
+        throw "Configured KLINES params not found on load";
+      }
+      const result = await klines.applyBusinessRules(
+        searchData,
+        _this.config.klines[0]
+      );
+      resolve(result);
+    } catch (err) {
+      console.log(`Err ${strategyName} processKlines:`, err);
+      reject(err);
+    }
+  });
+};

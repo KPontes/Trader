@@ -28,8 +28,8 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-var monitor = new Monitor(30000);
-app.post("/monitor", async (req, res) => {
+var monitor = new Monitor(60000);
+app.post("/loader", async (req, res) => {
   try {
     var result = await monitor.pooling();
     res.status(200).send(result);
