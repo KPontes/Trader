@@ -24,21 +24,7 @@ exports.getKLines = function(exchange, pair, interval) {
   });
 };
 
-exports.putOrder = function(exchange, oper, pair, type, quantity) {
-  return new Promise(async function(resolve, reject) {
-    try {
-      if ((exchange = "binance")) {
-        var data = await binance.putOrder(oper, pair, type, quantity);
-      }
-      resolve(data);
-    } catch (err) {
-      console.log("Err exchange putOrder: ", err);
-      reject(err);
-    }
-  });
-};
-
-exports.symbolPrice = function(exchange, pair) {
+exports.symbolPrice = function(exchange, pair = "") {
   return new Promise(async function(resolve, reject) {
     try {
       if ((exchange = "binance")) {
@@ -60,7 +46,7 @@ exports.serverTime = function(exchange) {
       }
       resolve(data);
     } catch (err) {
-      console.log("Err exchange symbolPrice: ", err);
+      console.log("Err exchange serverTime: ", err);
       reject(err);
     }
   });

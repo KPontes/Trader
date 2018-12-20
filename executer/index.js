@@ -4,13 +4,13 @@ const app = require("./app");
 var express = require("express");
 
 // Constants
-const LOADER_PORT = process.env.LOADER_PORT || 8080;
+const EXECUTER_PORT = process.env.EXECUTER_PORT || 8080;
 // if you're not using docker-compose for local development, this will default to 8080
 // to prevent non-root permission problems with 80. Dockerfile is set to make this 80
 // because containers don't have that issue :)
 
-var server = app.listen(LOADER_PORT, function() {
-  console.log(`Server listening on port ${LOADER_PORT}`);
+var server = app.listen(EXECUTER_PORT, function() {
+  console.log(`Server listening on port ${EXECUTER_PORT}`);
 });
 
 //

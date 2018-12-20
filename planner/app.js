@@ -5,10 +5,12 @@ const { mongoose } = require("./db/mongoose.js");
 
 const Monitor = require("./controller/monitor.js");
 const strategy = require("./controller/strategy.js");
+const { Strategy } = require("./models/strategy.js");
 
 const app = express();
 
 app.use(bodyParser.json());
+process.env["BASEPATH"] = __dirname;
 
 app.get("/express", (req, res) => {
   console.log("planner welcome message");
@@ -16,9 +18,6 @@ app.get("/express", (req, res) => {
     message: "Welcome to docker planner chart-trader Express Server"
   });
 });
-
-process.env["BASEPATH"] = __dirname;
-//console.log("process.env", process.env);
 
 var monitor = new Monitor(60000);
 app.post("/planner", async (req, res) => {
@@ -45,6 +44,16 @@ app.post("/stop", async (req, res) => {
 app.post("/strategyconfig", async (req, res) => {
   try {
     var result = await strategy.saveConfig(req.body);
+    res.status(200).send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+app.get("/getstrategyresults", async (req, res) => {
+  try {
+    var result = await Strategy.getMany();
     res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);

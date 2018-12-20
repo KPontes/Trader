@@ -7,37 +7,9 @@ const crypto = require("crypto");
 
 var _this = this;
 
-exports.getKLines = function(pair, interval) {
-  return new Promise(function(resolve, reject) {
-    axios
-      .get(
-        `https://www.binance.com/api/v1/klines?symbol=${pair}&interval=${interval}`
-      )
-      .then(res => {
-        var tokenData = res.data;
-        let trades = [];
-        tokenData.map(element => {
-          var kLine = {};
-          kLine.openTime = element[0];
-          kLine.open = _.round(Number(element[1]), 12);
-          kLine.high = _.round(Number(element[2]), 12);
-          kLine.low = _.round(Number(element[3]), 12);
-          kLine.close = _.round(Number(element[4]), 12);
-          kLine.volume = _.round(Number(element[5]), 12);
-          kLine.closeTime = element[6];
-          kLine.numberOf = parseInt(element[8]);
-          trades.push(kLine);
-        });
-        resolve(trades);
-      })
-      .catch(err => {
-        console.log("Err getKLines: ", err);
-        reject(err);
-      });
-  });
-};
+const EXCHANGE_URL = "https://api.binance.com";
 
-exports.putOrder = function(oper, pair, type, quantity) {
+exports.putOrder = function(oper, pair, type, quantity, tk, sk) {
   return new Promise(async function(resolve, reject) {
     let serverTime = await _this.serverTime();
     let orderObj = {
@@ -48,6 +20,7 @@ exports.putOrder = function(oper, pair, type, quantity) {
       recvWindow: 10000,
       timestamp: serverTime
     };
+
     let query = Object.keys(orderObj)
       .reduce(function(arr, key) {
         arr.push(key + "=" + encodeURIComponent(orderObj[key]));
@@ -56,39 +29,59 @@ exports.putOrder = function(oper, pair, type, quantity) {
       .join("&");
 
     let signature = crypto
-      .createHmac("sha256", process.env.BINSK)
+      .createHmac("sha256", sk)
       .update(query)
       .digest("hex"); // set the HMAC hash header
     query = query + "&signature=" + signature;
 
     var axiosObj = {
-      headers: { "X-MBX-APIKEY": process.env.BINTK },
+      headers: { "X-MBX-APIKEY": tk },
       method: "post",
-      baseURL: process.env["EXCHANGE_URL"],
+      baseURL: EXCHANGE_URL,
       url: `/api/v3/order/test?${query}`
     };
 
     axios(axiosObj)
       .then(res => resolve(res.data))
       .catch(err => {
-        console.log("Err putOrder: ", err);
+        console.log("Err putOrder: ");
         reject(err);
       });
   });
 };
 
-exports.symbolPrice = function(pair) {
-  return new Promise(function(resolve, reject) {
-    const url = `${
-      process.env["EXCHANGE_URL"]
-    }/api/v3/ticker/price?symbol=${pair}`;
-    axios
-      .get(url)
-      .then(res => {
-        resolve(res.data);
-      })
+exports.accountInfo = function(tk, sk) {
+  return new Promise(async function(resolve, reject) {
+    let serverTime = await _this.serverTime();
+    let orderObj = {
+      recvWindow: 10000,
+      timestamp: serverTime
+    };
+
+    let query = Object.keys(orderObj)
+      .reduce(function(arr, key) {
+        arr.push(key + "=" + encodeURIComponent(orderObj[key]));
+        return arr;
+      }, [])
+      .join("&");
+
+    let signature = crypto
+      .createHmac("sha256", sk)
+      .update(query)
+      .digest("hex"); // set the HMAC hash header
+    query = query + "&signature=" + signature;
+
+    var axiosObj = {
+      headers: { "X-MBX-APIKEY": tk },
+      method: "get",
+      baseURL: EXCHANGE_URL,
+      url: `/api/v3/account?${query}`
+    };
+
+    axios(axiosObj)
+      .then(res => resolve(res.data))
       .catch(err => {
-        console.log("Err symbolPrice: ", err);
+        console.log("Err accountInfo: ", err);
         reject(err);
       });
   });
@@ -99,7 +92,7 @@ exports.serverTime = function() {
     // var tradeTime = moment().valueOf();
     // tradeTime = tradeTime.toString();
     axios
-      .get(process.env["EXCHANGE_URL"] + "/api/v1/time")
+      .get(EXCHANGE_URL + "/api/v1/time")
       .then(res => {
         resolve(res.data.serverTime.toString());
       })

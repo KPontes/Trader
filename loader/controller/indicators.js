@@ -5,9 +5,24 @@ const { ILoader } = require("../models/indicatorLoader.js");
 
 var _this = this;
 
-function saveIndicators(obj) {
+function saveIndicators(req) {
   return new Promise(async function(resolve, reject) {
     try {
+      var obj = {
+        action: req.body.action,
+        period: req.body.period,
+        smaName: req.body.smaName,
+        smaParams: req.body.smaParams,
+        emaName: req.body.emaName,
+        emaParams: req.body.emaParams,
+        klinesName: req.body.klinesName,
+        rsiName: req.body.rsiName,
+        rsiParams: req.body.rsiParams,
+        macdName: req.body.macdName,
+        macdParams: req.body.macdParams,
+        bbandsName: req.body.bbandsName,
+        bbandsParams: req.body.bbandsParams
+      };
       if (obj.action === "drop") {
         await Indicator.collection.drop();
       } else {

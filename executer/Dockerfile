@@ -6,8 +6,8 @@ FROM node:11
 ARG NODE_ENV=production
 ENV NODE_ENV $NODE_ENV
 
-# default to port 6000 for node
-ARG PORT=6000
+# default to port 7000 for node
+ARG PORT=7000
 ENV PORT $PORT
 EXPOSE $PORT
 

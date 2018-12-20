@@ -2,14 +2,12 @@ const mongoose = require("mongoose");
 
 var LoaderSettingsSchema = new mongoose.Schema(
   {
-    exchanges: [
-      {
-        type: String,
-        required: true,
-        minlength: 3,
-        trim: true
-      }
-    ],
+    exchange: {
+      type: String,
+      required: true,
+      minlength: 3,
+      trim: true
+    },
     symbols: [
       {
         type: String,

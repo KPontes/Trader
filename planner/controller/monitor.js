@@ -51,7 +51,7 @@ Monitor.prototype.execute = function() {
           await strategyOne.generate(exchanges[0], pair, time);
         }
       }
-      console.log("OK executePlanner " + moment().format("YYYYMMDD:HHmmss"));
+      console.log("OK executePlanner, " + moment().format("YYYYMMDD:HHmmss"));
       resolve("OK");
     } catch (err) {
       console.log("Err executePlanner: ", err);

@@ -1,10 +1,10 @@
 const intervalObj = require("interval-promise");
 const moment = require("moment");
-const fs = require("fs-extra");
 
 const { ILoader } = require("../models/indicatorLoader.js");
 const { Indicator } = require("../models/indicator.js");
 const { Signalizer } = require("../models/signalizer.js");
+const { Prices } = require("../models/prices.js");
 const exchange = require("./exchange.js");
 const mavg = require("./movingAvg.js");
 const rsi = require("./rsi.js");
@@ -51,8 +51,10 @@ Monitor.prototype.executeLoader = function() {
       await ILoader.deleteMany();
       const timer = ["1m", "1h"];
       const exchanges = ["binance"];
-      //const pairs = ["XRPUSDT", "ETHUSDT", "BTCUSDT"];
-      const pairs = ["XRPUSDT"];
+      const pairs = ["XRPUSDT", "ETHUSDT"];
+      const priceList = await exchange.symbolPrice(exchanges[0]);
+      await Prices.saveMany(exchanges[0], pairs, priceList);
+
       for (let pair of pairs) {
         for (let time of timer) {
           let data = await exchange.getKLines(exchanges[0], pair, time);
@@ -66,7 +68,7 @@ Monitor.prototype.executeLoader = function() {
       }
       await Signalizer.upsert("status", "ready");
 
-      console.log("OK executeLoader " + moment().format("YYYYMMDD:HHmmss"));
+      console.log("OK executeLoader, " + moment().format("YYYYMMDD:HHmmss"));
       resolve("OK executeLoader");
     } catch (err) {
       console.log("Err executeLoader: ", err);

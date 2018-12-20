@@ -17,7 +17,7 @@ services:
     networks:
       - ctrader
 
-  loader-node:
+  loadernode:
     container_name: aperium-loader
     build:
       context: ./loader
@@ -37,7 +37,7 @@ services:
     networks:
       - ctrader
 
-  planner-node:
+  plannernode:
     container_name: aperium-planner
     build:
       context: ./planner
@@ -57,16 +57,36 @@ services:
     networks:
       - ctrader
 
-  mongo-express:
-    container_name: aperium-mongo-express
-    image: mongo-express
+  executernode:
+    container_name: aperium-executer
+    build:
+      context: ./executer
+      args:
+        - NODE_ENV=development
+    image: aperium-executer
+    mem_limit: 2gb
+    memswap_limit: 1gb
+    mem_reservation: 1gb
     ports:
-      - 8081:8081
+      - "7000:7000"
+    volumes:
+      - ./executer:/usr/src/app
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: dev123PWD
+      - NODE_ENV=development
+    command: node --max-old-space-size=2048 index.js
     networks:
       - ctrader
+
+  # mongo-express:
+  #   container_name: aperium-mongo-express
+  #   image: mongo-express
+  #   ports:
+  #     - 8081:8081
+  #   environment:
+  #     ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+  #     ME_CONFIG_MONGODB_ADMINPASSWORD: dev123PWD
+  #   networks:
+  #     - ctrader
 volumes:
   aperium-mongo:
 networks:

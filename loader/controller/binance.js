@@ -37,51 +37,12 @@ exports.getKLines = function(pair, interval) {
   });
 };
 
-exports.putOrder = function(oper, pair, type, quantity) {
-  return new Promise(async function(resolve, reject) {
-    let serverTime = await _this.serverTime();
-    let orderObj = {
-      symbol: pair,
-      side: oper,
-      type,
-      quantity,
-      recvWindow: 10000,
-      timestamp: serverTime
-    };
-    let query = Object.keys(orderObj)
-      .reduce(function(arr, key) {
-        arr.push(key + "=" + encodeURIComponent(orderObj[key]));
-        return arr;
-      }, [])
-      .join("&");
-
-    let signature = crypto
-      .createHmac("sha256", process.env.BINSK)
-      .update(query)
-      .digest("hex"); // set the HMAC hash header
-    query = query + "&signature=" + signature;
-
-    var axiosObj = {
-      headers: { "X-MBX-APIKEY": process.env.BINTK },
-      method: "post",
-      baseURL: process.env["EXCHANGE_URL"],
-      url: `/api/v3/order/test?${query}`
-    };
-
-    axios(axiosObj)
-      .then(res => resolve(res.data))
-      .catch(err => {
-        console.log("Err putOrder: ", err);
-        reject(err);
-      });
-  });
-};
-
 exports.symbolPrice = function(pair) {
   return new Promise(function(resolve, reject) {
-    const url = `${
-      process.env["EXCHANGE_URL"]
-    }/api/v3/ticker/price?symbol=${pair}`;
+    var url = `${process.env["EXCHANGE_URL"]}/api/v3/ticker/price`;
+    if (pair !== "") {
+      url = `${url}?symbol=${pair}`;
+    }
     axios
       .get(url)
       .then(res => {

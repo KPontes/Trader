@@ -33,6 +33,18 @@ var StrategySchema = new mongoose.Schema(
   }
 );
 
+StrategySchema.statics.getMany = async function() {
+  return new Promise(async function(resolve, reject) {
+    try {
+      const stList = await Strategy.find();
+      resolve(stList);
+    } catch (err) {
+      console.log("Err getMany strategy: ", err);
+      reject(err);
+    }
+  });
+};
+
 var Strategy = mongoose.model("Strategy", StrategySchema);
 
 module.exports = { Strategy };

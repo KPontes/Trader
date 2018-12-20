@@ -1,8 +1,8 @@
 const intervalObj = require("interval-promise");
 const moment = require("moment");
 
-const { Signalizer } = require("../models/signalizer.js");
-const StrategyOne = require("../strategies/strategyOne.js");
+const { User } = require("../models/user.js");
+const trade = require("./trade.js");
 
 ("use strict");
 
@@ -24,7 +24,7 @@ Monitor.prototype.pooling = async function() {
         }
         var result = await _this.execute();
       } catch (err) {
-        console.log("Err planner Pooling", err.message);
+        console.log("Err executer Pooling", err.message);
         //_this.stopExecute = true;
       }
     },
@@ -37,28 +37,38 @@ Monitor.prototype.execute = function() {
   var _this = this;
   return new Promise(async function(resolve, reject) {
     try {
-      var signal = await Signalizer.findOne({ name: "status" });
-      if (!signal || signal.value === "loading") {
-        throw "No signalizer or loading";
+      let userList = await User.find({ status: User.UserStatus.activeOn });
+      let priceList = await trade.getSymbolPricesAPI();
+      let stResults = await trade.getStrategyResultsAPI();
+      for (let user of userList) {
+        await trade.execute(user, priceList, stResults);
       }
-      const timer = ["1m"];
-      const exchanges = ["binance"];
-      //const pairs = ["XRPUSDT", "ETHUSDT", "BTCUSDT"];
-      const pairs = ["XRPUSDT"];
-      for (let pair of pairs) {
-        for (let time of timer) {
-          var strategyOne = new StrategyOne();
-          await strategyOne.generate(exchanges[0], pair, time);
-        }
-      }
-      console.log("OK executePlanner " + moment().format("YYYYMMDD:HHmmss"));
+      console.log("OK executeExecuter, " + moment().format("YYYYMMDD:HHmmss"));
       resolve("OK");
     } catch (err) {
-      console.log("Err executePlanner: ", err);
+      //console.log("Err executeExecuter: ", err);
       reject(err);
     }
   });
 };
+
+function getTransactions(trades) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      var transactions = [];
+      for (let trade of trades) {
+        var tr = await Transaction.findOne({
+          tradeKey: ObjectId(trade._id)
+        }).exec();
+        transactions.push(tr);
+      }
+      resolve(transactions);
+    } catch (e) {
+      console.log("getTransaction Error: ", e);
+      reject(e);
+    }
+  });
+}
 
 Monitor.prototype.stop = function() {
   this.stopExecute = true;

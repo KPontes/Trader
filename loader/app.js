@@ -6,6 +6,7 @@ const { mongoose } = require("./db/mongoose.js");
 
 const Monitor = require("./controller/monitor.js");
 const ctrIndicators = require("./controller/indicators.js");
+const { Prices } = require("./models/prices");
 
 const app = express();
 
@@ -13,7 +14,7 @@ app.use(bodyParser.json());
 
 app.get("/express", (req, res) => {
   console.log("welcome message");
-  res.send({ message: "Welcome to docker chart-trader Express Server" });
+  res.send({ message: "Welcome to docker chart-trader loader Express Server" });
 });
 
 process.env["BASEPATH"] = __dirname;
@@ -31,7 +32,8 @@ if (process.env.NODE_ENV === "production") {
 var monitor = new Monitor(60000);
 app.post("/loader", async (req, res) => {
   try {
-    var result = await monitor.pooling();
+    //var result = await monitor.pooling();
+    var result = await monitor.executeLoader();
     res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);
@@ -41,22 +43,17 @@ app.post("/loader", async (req, res) => {
 
 app.post("/addindicators", async (req, res) => {
   try {
-    var obj = {
-      action: req.body.action,
-      period: req.body.period,
-      smaName: req.body.smaName,
-      smaParams: req.body.smaParams,
-      emaName: req.body.emaName,
-      emaParams: req.body.emaParams,
-      klinesName: req.body.klinesName,
-      rsiName: req.body.rsiName,
-      rsiParams: req.body.rsiParams,
-      macdName: req.body.macdName,
-      macdParams: req.body.macdParams,
-      bbandsName: req.body.bbandsName,
-      bbandsParams: req.body.bbandsParams
-    };
-    var result = await ctrIndicators.saveIndicators(obj);
+    var result = await ctrIndicators.saveIndicators(req);
+    res.status(200).send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+app.get("/getsymbolprices", async (req, res) => {
+  try {
+    var result = await Prices.getMany();
     res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);
@@ -68,16 +65,6 @@ app.post("/stop", async (req, res) => {
   try {
     var result = monitor.stop();
     res.send(result);
-  } catch (e) {
-    console.log("Error: ", e);
-    res.status(400).send(e);
-  }
-});
-
-app.post("/oneload", async (req, res) => {
-  try {
-    var result = await monitor.executeLoader();
-    res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);
     res.status(400).send(e);

@@ -1,8 +1,3 @@
-const moment = require("moment");
-const axios = require("axios");
-const _ = require("lodash");
-const crypto = require("crypto");
-
 const binance = require("./binance");
 
 ("use strict");
@@ -10,10 +5,38 @@ const binance = require("./binance");
 var _this = this;
 //binance set as default template
 //for other exchaneges will need to Normalize results
+exports.putOrder = function(exchange, oper, symbol, type, amount, tk, sk) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      if (exchange === "binance") {
+        var data = await binance.putOrder(oper, symbol, type, amount, tk, sk);
+      }
+      resolve(data);
+    } catch (err) {
+      console.log("Err exchange putOrder: ", err);
+      reject(err);
+    }
+  });
+};
+
+exports.accountInfo = function(exchange, tk, sk) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      if (exchange === "binance") {
+        var data = await binance.accountInfo(tk, sk);
+      }
+      resolve(data);
+    } catch (err) {
+      console.log("Err exchange accountInfo: ", err);
+      reject(err);
+    }
+  });
+};
+
 exports.getKLines = function(exchange, pair, interval) {
   return new Promise(async function(resolve, reject) {
     try {
-      if ((exchange = "binance")) {
+      if (exchange === "binance") {
         var data = await binance.getKLines(pair, interval);
       }
       resolve(data);
@@ -24,24 +47,10 @@ exports.getKLines = function(exchange, pair, interval) {
   });
 };
 
-exports.putOrder = function(exchange, oper, pair, type, quantity) {
-  return new Promise(async function(resolve, reject) {
-    try {
-      if ((exchange = "binance")) {
-        var data = await binance.putOrder(oper, pair, type, quantity);
-      }
-      resolve(data);
-    } catch (err) {
-      console.log("Err exchange putOrder: ", err);
-      reject(err);
-    }
-  });
-};
-
 exports.symbolPrice = function(exchange, pair) {
   return new Promise(async function(resolve, reject) {
     try {
-      if ((exchange = "binance")) {
+      if (exchange === "binance") {
         var data = await binance.symbolPrice(pair);
       }
       resolve(data);
@@ -55,7 +64,7 @@ exports.symbolPrice = function(exchange, pair) {
 exports.serverTime = function(exchange) {
   return new Promise(async function(resolve, reject) {
     try {
-      if ((exchange = "binance")) {
+      if (exchange === "binance") {
         var data = await binance.serverTime();
       }
       resolve(data);

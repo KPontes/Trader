@@ -1,19 +1,19 @@
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
-const { mongoose } = require("./db/mongoose.js");
 
+const { mongoose } = require("./db/mongoose.js");
 const Monitor = require("./controller/monitor.js");
-const strategy = require("./controller/strategy.js");
+const user = require("./controller/user.js");
 
 const app = express();
 
 app.use(bodyParser.json());
 
 app.get("/express", (req, res) => {
-  console.log("planner welcome message");
+  console.log("executer welcome message");
   res.send({
-    message: "Welcome to docker planner chart-trader Express Server"
+    message: "Welcome to docker executer chart-trader Express Server"
   });
 });
 
@@ -21,7 +21,7 @@ process.env["BASEPATH"] = __dirname;
 //console.log("process.env", process.env);
 
 var monitor = new Monitor(60000);
-app.post("/planner", async (req, res) => {
+app.post("/executer", async (req, res) => {
   try {
     var result = await monitor.execute();
     //var result = await monitor.pooling();
@@ -42,9 +42,19 @@ app.post("/stop", async (req, res) => {
   }
 });
 
-app.post("/strategyconfig", async (req, res) => {
+app.post("/adduser", async (req, res) => {
   try {
-    var result = await strategy.saveConfig(req.body);
+    var result = await user.save(req.body);
+    res.status(200).send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+app.post("/addusersymbol", async (req, res) => {
+  try {
+    var result = await user.saveSymbol(req.body);
     res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);
