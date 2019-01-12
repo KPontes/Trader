@@ -23,12 +23,12 @@ process.env["BASEPATH"] = __dirname;
 var monitor = new Monitor(60000);
 app.post("/executer", async (req, res) => {
   try {
-    var result = await monitor.execute();
-    //var result = await monitor.pooling();
-    res.status(200).send(result);
+    //var result = await monitor.execute();
+    await monitor.pooling();
+    res.status(200).send("OK started executer monitor");
   } catch (e) {
-    console.log("Error: ", e);
-    res.status(400).send(e);
+    console.log(`app Error: ${e.response.status} - ${e.response.statusText} - ${e.response.data}`);
+    res.status(400).send(e.response.data);
   }
 });
 
@@ -66,7 +66,7 @@ app.get("/healthz", function(req, res) {
   // do app logic here to determine if app is truly healthy
   // you should return 200 if healthy, and anything else will fail
   // if you want, you should be able to restrict this to localhost (include ipv4 and ipv6)
-  res.status(200).send("I am happy and healthy\n");
+  res.status(200).send("I am a happy and healthy executer\n");
 });
 
 module.exports = app;

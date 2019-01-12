@@ -1,10 +1,13 @@
-const { Signalizer } = require("../models/signalizer.js");
+const moment = require("moment");
+const _ = require("lodash");
+
 const mavg = require("../controller/movingAvg.js");
 const rsi = require("../controller/rsi.js");
 const bbands = require("../controller/bbands.js");
 const macd = require("../controller/macd.js");
 const klines = require("../controller/klines.js");
 const strategy = require("../controller/strategy.js");
+const { Strategy } = require("../models/strategy.js");
 
 ("use strict");
 
@@ -12,15 +15,9 @@ const strategyName = "StrategyOne";
 
 module.exports = StrategyOne;
 
-function StrategyOne(params) {
+function StrategyOne(config) {
   //config params must be always in array format
-  this.config = {
-    sma: [4, 7, 25, 99],
-    rsi: [14, 30, 70, 7],
-    bbands: [20, 100],
-    macd: [12, 26, 9],
-    klines: [0.005]
-  };
+  this.config = config;
 }
 
 function findDocs(arr, value) {
@@ -32,38 +29,107 @@ function findDocs(arr, value) {
   return result ? result.data : undefined;
 }
 
-StrategyOne.prototype.generate = function(exchange, pair, period) {
+StrategyOne.prototype.findResult = function(exchange, symbol, period) {
   var _this = this;
   return new Promise(async function(resolve, reject) {
     try {
-      await Signalizer.upsert(strategyName, "loading");
-      //await Strategy.deleteMany({ name: "strategyOne" });
-      const SMA = await _this.processSMA(exchange, pair, period);
-      const RSI = await _this.processRSI(exchange, pair, period);
-      const BBANDS = await _this.processBBands(exchange, pair, period);
-      const MACD = await _this.processMACD(exchange, pair, period);
-      const KLINES = await _this.processKLines(exchange, pair, period);
+      //Find if config passed on constructor exists on collection Strategy
+      var stgList = await Strategy.find({ name: strategyName, exchange, symbol, period });
+      let stg;
+      let match;
+      for (let doc of stgList) {
+        match = true;
+        Object.keys(_this.config.calc).forEach(key => {
+          let cfgCalcInput = _this.config.calc[key];
+          let cfgCalcDb = doc.configcalc[key];
+          if (cfgCalcDb.length !== cfgCalcInput.length) match = false;
+          cfgCalcInput.map(item => {
+            if (_.indexOf(cfgCalcDb, item) === -1) {
+              match = false;
+            }
+          });
+        });
+        Object.keys(_this.config.rule).forEach(key => {
+          let cfgRuleInput = _this.config.rule[key];
+          let cfgRuleDb = doc.configrule[key];
+          if (cfgRuleDb.length !== cfgRuleInput.length) match = false;
+          cfgRuleInput.map(item => {
+            if (_.indexOf(cfgRuleDb, item) === -1) {
+              match = false;
+            }
+          });
+        });
+        if (match) {
+          stg = doc;
+          break;
+        }
+      }
+      if (!match) {
+        return resolve({ result: false, action: "insert" });
+      }
+      if (!(stg.lastresult && stg.lastsummary)) {
+        return resolve({ result: stg, action: "update" });
+      }
+      if (moment().subtract(1, "minutes") > stg.updatedAt) {
+        return resolve({ result: stg, action: "update" });
+      }
+      resolve({ result: stg, action: "none" });
+    } catch (err) {
+      console.log("Err generate: ", err);
+      reject(err);
+    }
+  });
+};
+
+StrategyOne.prototype.createConfig = function(exchange, pair, period) {
+  var _this = this;
+  return new Promise(async function(resolve, reject) {
+    try {
+      let newStrategy = {
+        name: strategyName,
+        exchange,
+        pair,
+        period
+      };
+      //transform config into an input like the postman request
+      Object.keys(_this.config.calc).forEach(key => {
+        let newkey = "calc-" + key;
+        newStrategy[newkey] = _this.config.calc[key];
+      });
+      Object.keys(_this.config.rule).forEach(key => {
+        let newkey = "rule-" + key;
+        newStrategy[newkey] = _this.config.rule[key];
+      });
+      let stg = await strategy.saveConfig(newStrategy);
+      resolve({ result: stg, action: "update" });
+    } catch (err) {
+      console.log("Err update StrategyOne: ", err);
+      reject(err);
+    }
+  });
+};
+
+StrategyOne.prototype.updateResult = function(stdoc) {
+  var _this = this;
+  return new Promise(async function(resolve, reject) {
+    try {
+      const exchange = stdoc.exchange;
+      const symbol = stdoc.symbol;
+      const period = stdoc.period;
+      const SMA = await _this.processSMA(exchange, symbol, period);
+      const RSI = await _this.processRSI(exchange, symbol, period);
+      const BBANDS = await _this.processBBands(exchange, symbol, period);
+      const MACD = await _this.processMACD(exchange, symbol, period);
+      const KLINES = await _this.processKLines(exchange, symbol, period);
       const result = SMA.concat(RSI)
         .concat(BBANDS)
         .concat(MACD)
         .concat(KLINES);
-      const summary = await _this.summarize(exchange, pair, period, result);
-      await strategy.saveResult(
-        strategyName,
-        exchange,
-        pair,
-        period,
-        _this.config,
-        result,
-        summary
-      );
-      await Signalizer.upsert(strategyName, "ready");
-      console.log(result);
-      console.log(summary);
-      console.log("OK generate " + strategyName);
-      resolve("OK " + strategyName);
+      const summary = await _this.summarize(exchange, symbol, period, result);
+      let st = await strategy.saveResultById(stdoc._id, result, summary);
+      resolve({ result, summary });
     } catch (err) {
-      console.log("Err generate: ", err);
+      console.log("Err update StrategyOne: ", err);
       reject(err);
     }
   });
@@ -110,10 +176,13 @@ StrategyOne.prototype.processSMA = function(exchange, pair, period) {
   return new Promise(async function(resolve, reject) {
     try {
       const arr = await mavg.getData(exchange, pair, period);
-      const xShortMA = findDocs(arr.docs, _this.config.sma[0]);
-      const shortMA = findDocs(arr.docs, _this.config.sma[1]);
-      const mediumMA = findDocs(arr.docs, _this.config.sma[2]);
-      const longMA = findDocs(arr.docs, _this.config.sma[3]);
+      if (!arr.docs || arr.docs.length === 0) {
+        throw "Err missing iloader SMA docs";
+      }
+      const xShortMA = findDocs(arr.docs, _this.config.calc.sma[0]);
+      const shortMA = findDocs(arr.docs, _this.config.calc.sma[1]);
+      const mediumMA = findDocs(arr.docs, _this.config.calc.sma[2]);
+      const longMA = findDocs(arr.docs, _this.config.calc.sma[3]);
       if (!xShortMA || !shortMA || !mediumMA || !longMA) {
         throw "Configured MA params not found on load";
       }
@@ -133,15 +202,15 @@ StrategyOne.prototype.processRSI = function(exchange, pair, period) {
   return new Promise(async function(resolve, reject) {
     try {
       const arr = await rsi.getData(exchange, pair, period);
-      const searchData = findDocs(arr.docs, _this.config.rsi[0]);
+      const searchData = findDocs(arr.docs, _this.config.calc.rsi[0]);
       if (!searchData) {
-        throw "Configured RSI params not found on load";
+        throw "Err missing iloader RSI docs";
       }
       const result = await rsi.applyBusinessRules(
         searchData,
-        _this.config.rsi[1],
-        _this.config.rsi[2],
-        _this.config.rsi[3]
+        _this.config.rule.rsi[0],
+        _this.config.rule.rsi[1],
+        _this.config.rule.rsi[2]
       );
       resolve(result);
     } catch (err) {
@@ -156,14 +225,11 @@ StrategyOne.prototype.processBBands = function(exchange, pair, period) {
   return new Promise(async function(resolve, reject) {
     try {
       const arr = await bbands.getData(exchange, pair, period);
-      const searchData = findDocs(arr.docs, _this.config.bbands[0]);
+      const searchData = findDocs(arr.docs, _this.config.calc.bbands[0]);
       if (!searchData) {
-        throw "Configured BBANDS params not found on load";
+        throw "Err missing iloader BBands docs";
       }
-      const result = await bbands.applyBusinessRules(
-        searchData,
-        _this.config.bbands[1]
-      );
+      const result = await bbands.applyBusinessRules(searchData, _this.config.rule.bbands[1]);
       resolve(result);
     } catch (err) {
       console.log(`Err ${strategyName} processBBands:`, err);
@@ -176,7 +242,7 @@ StrategyOne.prototype.processMACD = function(exchange, pair, period) {
   var _this = this;
 
   function findDocsMACD(arr, value) {
-    //macd params is a comma separated string
+    //macd params at iLoader is a comma separated string
     let result = arr.find(function(element) {
       if (element.params === value) {
         return element.data;
@@ -187,10 +253,10 @@ StrategyOne.prototype.processMACD = function(exchange, pair, period) {
   return new Promise(async function(resolve, reject) {
     try {
       const arr = await macd.getData(exchange, pair, period);
-      const searchParam = _this.config.macd.join(",");
+      const searchParam = _this.config.calc.macd.join(",");
       const searchData = findDocsMACD(arr.docs, searchParam);
       if (!searchData) {
-        throw "Configured MACD params not found on load";
+        throw "Err missing iloader MACD docs";
       }
       const result = await macd.applyBusinessRules(searchData[0]);
       resolve(result);
@@ -209,12 +275,9 @@ StrategyOne.prototype.processKLines = function(exchange, pair, period) {
       //unique fixed search parameter as klines dont change with parameters
       const searchData = findDocs(arr.docs, 1);
       if (!searchData) {
-        throw "Configured KLINES params not found on load";
+        throw "Err missing iloader KLINES docs";
       }
-      const result = await klines.applyBusinessRules(
-        searchData,
-        _this.config.klines[0]
-      );
+      const result = await klines.applyBusinessRules(searchData, _this.config.rule.klines[0]);
       resolve(result);
     } catch (err) {
       console.log(`Err ${strategyName} processKlines:`, err);
@@ -222,3 +285,20 @@ StrategyOne.prototype.processKLines = function(exchange, pair, period) {
     }
   });
 };
+
+// this.config = {
+//   calc: {
+//     sma: [4, 7, 25, 99],
+//     rsi: [14],
+//     bbands: [20],
+//     macd: [12, 26, 9],
+//     klines: [1]
+//   },
+//   rule: {
+//     sma: [],
+//     rsi: [30, 70, 7],
+//     bbands: [100],
+//     macd: [],
+//     klines: [0.005]
+//   }
+// };

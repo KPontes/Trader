@@ -41,12 +41,13 @@ PricesSchema.statics.upsert = async function(exchange, symbol, value) {
 PricesSchema.statics.saveMany = async function(exchange, pairs, priceList) {
   return new Promise(async function(resolve, reject) {
     try {
-      const shortList = priceList.filter(element => {
+      let shortList = priceList.filter(element => {
         return pairs.indexOf(element.symbol) !== -1;
       });
       for (let element of shortList) {
-        await Prices.upsert(exchange, element.symbol, Number(element.price));
+        let saved = await Prices.upsert(exchange, element.symbol, Number(element.price));
       }
+      console.log("Price shortList", shortList);
       resolve(shortList);
     } catch (err) {
       console.log("Err saveMany price: ", err);

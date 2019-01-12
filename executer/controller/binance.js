@@ -45,6 +45,9 @@ exports.putOrder = function(oper, pair, type, quantity, tk, sk) {
       .then(res => resolve(res.data))
       .catch(err => {
         console.log("Err putOrder: ");
+        if (err.response) {
+          console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+        }
         reject(err);
       });
   });
@@ -81,7 +84,10 @@ exports.accountInfo = function(tk, sk) {
     axios(axiosObj)
       .then(res => resolve(res.data))
       .catch(err => {
-        console.log("Err accountInfo: ", err);
+        console.log("Err accountInfo: ");
+        if (err.response) {
+          console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+        }
         reject(err);
       });
   });
@@ -97,7 +103,10 @@ exports.serverTime = function() {
         resolve(res.data.serverTime.toString());
       })
       .catch(err => {
-        console.log("Err serverTime: ", err);
+        console.log("Err serverTime: ");
+        if (err.response) {
+          console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+        }
         reject(err);
       });
   });

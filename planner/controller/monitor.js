@@ -1,66 +1,37 @@
-const intervalObj = require("interval-promise");
 const moment = require("moment");
 
-const { Signalizer } = require("../models/signalizer.js");
 const StrategyOne = require("../strategies/strategyOne.js");
 
 ("use strict");
 
-module.exports = Monitor;
-
-function Monitor(interval) {
-  this.interval = interval;
-  this.stopExecute = false;
-}
-
-Monitor.prototype.pooling = async function() {
-  var _this = this;
-  intervalObj(
-    async (iteration, stop) => {
-      try {
-        if (_this.stopExecute) {
-          console.log("Stop executeTrade loop");
-          stop();
-        }
-        var result = await _this.execute();
-      } catch (err) {
-        console.log("Err planner Pooling", err.message);
-        //_this.stopExecute = true;
-      }
-    },
-    _this.interval,
-    (options = { stopOnError: true })
-  );
-};
-
-Monitor.prototype.execute = function() {
+function execute(request) {
   var _this = this;
   return new Promise(async function(resolve, reject) {
     try {
-      var signal = await Signalizer.findOne({ name: "status" });
-      if (!signal || signal.value === "loading") {
-        throw "No signalizer or loading";
-      }
-      const timer = ["1m"];
-      const exchanges = ["binance"];
-      //const pairs = ["XRPUSDT", "ETHUSDT", "BTCUSDT"];
-      const pairs = ["XRPUSDT"];
-      for (let pair of pairs) {
-        for (let time of timer) {
-          var strategyOne = new StrategyOne();
-          await strategyOne.generate(exchanges[0], pair, time);
+      const name = request.strategy;
+      const exchange = request.exchange;
+      const symbol = request.symbol;
+      const period = request.period;
+      const config = request.config;
+      let foundSt1 = {};
+      if (name === "StrategyOne") {
+        var strategyOne = new StrategyOne(config);
+        foundSt1 = await strategyOne.findResult(exchange, symbol, period);
+        if (foundSt1.action !== "none") {
+          if (foundSt1.action === "insert") {
+            foundSt1 = await strategyOne.createConfig(exchange, symbol, period);
+          }
+          foundSt1 = await strategyOne.updateResult(foundSt1.result);
         }
       }
-      console.log("OK executePlanner, " + moment().format("YYYYMMDD:HHmmss"));
-      resolve("OK");
+      resolve({ result: foundSt1.result, summary: foundSt1.summary });
     } catch (err) {
-      console.log("Err executePlanner: ", err);
+      console.log("Err Planner monitor execute : ", err);
       reject(err);
     }
   });
-};
+}
 
-Monitor.prototype.stop = function() {
-  this.stopExecute = true;
-  return "OK";
+module.exports = {
+  execute: execute
 };

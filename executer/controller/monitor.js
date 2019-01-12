@@ -37,38 +37,37 @@ Monitor.prototype.execute = function() {
   var _this = this;
   return new Promise(async function(resolve, reject) {
     try {
-      let userList = await User.find({ status: User.UserStatus.activeOn });
+      let userList = await User.find({
+        status: User.UserStatus.activeOn,
+        validtil: { $gt: Date() }
+      });
       let priceList = await trade.getSymbolPricesAPI();
-      let stResults = await trade.getStrategyResultsAPI();
       for (let user of userList) {
-        await trade.execute(user, priceList, stResults);
+        let index = 0; //monitor array index
+        for (let monitor of user.monitor) {
+          let config = { calc: monitor.configcalc, rule: monitor.configrule };
+          let stResults = await trade.getStrategyResultsAPI(
+            monitor.strategy,
+            user.exchange,
+            monitor.symbol,
+            monitor.period,
+            config
+          );
+          await trade.execute(user, index, priceList, stResults);
+          index += 1;
+        }
       }
-      console.log("OK executeExecuter, " + moment().format("YYYYMMDD:HHmmss"));
+      console.log("OK Executer execute, " + moment().format("YYYYMMDD:HHmmss"));
       resolve("OK");
     } catch (err) {
-      //console.log("Err executeExecuter: ", err);
+      console.log("Err Executer execute");
+      if (err.response) {
+        console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+      }
       reject(err);
     }
   });
 };
-
-function getTransactions(trades) {
-  return new Promise(async function(resolve, reject) {
-    try {
-      var transactions = [];
-      for (let trade of trades) {
-        var tr = await Transaction.findOne({
-          tradeKey: ObjectId(trade._id)
-        }).exec();
-        transactions.push(tr);
-      }
-      resolve(transactions);
-    } catch (e) {
-      console.log("getTransaction Error: ", e);
-      reject(e);
-    }
-  });
-}
 
 Monitor.prototype.stop = function() {
   this.stopExecute = true;

@@ -10,9 +10,7 @@ var _this = this;
 exports.getKLines = function(pair, interval) {
   return new Promise(function(resolve, reject) {
     axios
-      .get(
-        `https://www.binance.com/api/v1/klines?symbol=${pair}&interval=${interval}`
-      )
+      .get(`https://www.binance.com/api/v1/klines?symbol=${pair}&interval=${interval}`)
       .then(res => {
         var tokenData = res.data;
         let trades = [];
@@ -31,7 +29,10 @@ exports.getKLines = function(pair, interval) {
         resolve(trades);
       })
       .catch(err => {
-        console.log("Err getKLines: ", err);
+        console.log("Err getKLines: ");
+        if (err.response) {
+          console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+        }
         reject(err);
       });
   });
@@ -49,7 +50,10 @@ exports.symbolPrice = function(pair) {
         resolve(res.data);
       })
       .catch(err => {
-        console.log("Err symbolPrice: ", err);
+        console.log("Err symbolPrice: ");
+        if (err.response) {
+          console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+        }
         reject(err);
       });
   });
@@ -65,7 +69,10 @@ exports.serverTime = function() {
         resolve(res.data.serverTime.toString());
       })
       .catch(err => {
-        console.log("Err serverTime: ", err);
+        console.log("Err serverTime: ");
+        if (err.response) {
+          console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+        }
         reject(err);
       });
   });

@@ -18,7 +18,7 @@ exports.getKLines = function(exchange, pair, interval) {
       }
       resolve(data);
     } catch (err) {
-      console.log("Err exchange getKLines: ", err);
+      console.log("Err exchange getKLines: ");
       reject(err);
     }
   });
@@ -32,7 +32,7 @@ exports.symbolPrice = function(exchange, pair = "") {
       }
       resolve(data);
     } catch (err) {
-      console.log("Err exchange symbolPrice: ", err);
+      console.log("Err exchange symbolPrice: ");
       reject(err);
     }
   });

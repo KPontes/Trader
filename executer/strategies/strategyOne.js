@@ -2,6 +2,7 @@ const ctruser = require("../controller/user.js");
 const ctrexchange = require("../controller/exchange.js");
 const scrypto = require("../utils/simplecrypto.js");
 const { User } = require("../models/user.js");
+const { Trade } = require("../models/trade.js");
 
 ("use strict");
 
@@ -11,28 +12,31 @@ function makeOrder(operation, user, index, currPrice) {
       const userpair = user.monitor[index];
       const exchange = user.exchange;
       const symbol = userpair.symbol;
+      const ordertype = "MARKET";
+      const oper = operation.oper;
       let upduser = await updateStopLoss(user, index, currPrice);
-      let result = {};
-      if (operation.oper !== "none") {
+      let order = {};
+      if (oper !== "none") {
         const tk = scrypto.decrypt(user.tk, process.env.SYSPD);
         const sk = scrypto.decrypt(user.sk, process.env.SYSPD);
         let amount = await ctruser.getBalance(exchange, symbol, tk, sk);
         if (amount > userpair.maxAmount) amount = userpair.maxAmount;
-        result = await ctrexchange.putOrder(
+        order = await ctrexchange.putOrder(exchange, oper, symbol, ordertype, amount, tk, sk);
+        let doc = await updUserPostOrder(oper, user, index, currPrice);
+        console.log("Trade", oper);
+        let trade = await Trade.insert(
+          user._id,
           exchange,
-          operation.oper,
           symbol,
-          "MARKET",
-          amount,
-          tk,
-          sk
+          ordertype,
+          oper,
+          currPrice,
+          amount
         );
-        let doc = await updatePosOrder(operation.oper, user, index, currPrice);
-        //SALVAR TRADES EXECUTADAS NO BD
       }
-      resolve(result);
+      resolve(order);
     } catch (err) {
-      console.log("Err makeOrder ", err);
+      console.log("Err makeOrder ");
       reject(err);
     }
   });
@@ -41,18 +45,33 @@ function makeOrder(operation, user, index, currPrice) {
 function updateStopLoss(user, index, currPrice) {
   return new Promise(async function(resolve, reject) {
     try {
+      //update stoploss topPrice
       const userpair = user.monitor[index];
       let upduser = await User.findById(user._id);
-      //update stoploss topPrice.
-      //instead of check Buy, better check if user has balance
       if (
         currPrice > userpair.stopLoss.topPrice &&
-        user.lastDirection === "buy"
+        userpair.lastDirection.toLowerCase() === "buy"
       ) {
         if (upduser) {
           upduser.monitor[index].stopLoss = {
-            variation: userpair.stopLoss.variation,
-            topPrice: currPrice
+            topVariation: userpair.stopLoss.topVariation,
+            bottomVariation: userpair.stopLoss.bottomVariation,
+            topPrice: currPrice,
+            bottomPrice: Number.MAX_SAFE_INTEGER
+          };
+          await upduser.save();
+        }
+      }
+      if (
+        currPrice < userpair.stopLoss.bottomPrice &&
+        userpair.lastDirection.toLowerCase() === "sell"
+      ) {
+        if (upduser) {
+          upduser.monitor[index].stopLoss = {
+            topVariation: userpair.stopLoss.topVariation,
+            bottomVariation: userpair.stopLoss.bottomVariation,
+            topPrice: 0.001,
+            bottomPrice: currPrice
           };
           await upduser.save();
         }
@@ -65,21 +84,28 @@ function updateStopLoss(user, index, currPrice) {
   });
 }
 
-function updatePosOrder(oper, user, index, currPrice) {
+function updUserPostOrder(oper, user, index, currPrice) {
   return new Promise(async function(resolve, reject) {
     try {
-      //INCLUIR UPDATE DE TRADES PARA USER TER LOG DAS trades
-
       //update user.userpair.lastPrice, lastDirection and stoploss
       const userpair = user.monitor[index];
       let upduser = await User.findById(user._id);
       if (upduser) {
         upduser.monitor[index].lastDirection = oper;
         upduser.monitor[index].lastPrice = currPrice;
-        if (oper === "sell") {
+        if (oper.toLowerCase() === "buy") {
           upduser.monitor[index].stopLoss = {
-            variation: userpair.stopLoss.variation,
-            topPrice: 0.001
+            topVariation: userpair.stopLoss.topVariation,
+            bottomVariation: userpair.stopLoss.bottomVariation,
+            topPrice: currPrice,
+            bottomPrice: Number.MAX_SAFE_INTEGER
+          };
+        } else {
+          upduser.monitor[index].stopLoss = {
+            topVariation: userpair.stopLoss.topVariation,
+            bottomVariation: userpair.stopLoss.bottomVariation,
+            topPrice: 0.001,
+            bottomPrice: currPrice
           };
         }
         await upduser.save();
@@ -97,14 +123,82 @@ function defineOperation(user, userpair, summary, currPrice) {
     try {
       let oResult = {};
       oResult = summaryRules(userpair, summary);
+      console.log("summaryRules", oResult);
       oResult = variationRules(oResult, userpair, currPrice);
+      console.log("variationRules", oResult);
       oResult = directionRules(oResult, userpair);
+      console.log("directionRules", oResult);
       resolve(oResult);
     } catch (err) {
       console.log("Err stOne defineOperation: ", err);
       reject(err);
     }
   });
+}
+
+function summaryRules(userpair, summary) {
+  try {
+    let oper = "none";
+    let rule = "none";
+    //treat summary rules
+    if (userpair.summaryRule.count === "unanimous" && userpair.summaryRule.factor === "3") {
+      if (
+        summary.countBuy >= summary.countSell + summary.countNone &&
+        summary.factorBuy > summary.factorSell + 3
+      ) {
+        oper = "buy";
+        rule = "count & factor summary";
+      }
+      if (
+        summary.countSell >= summary.countBuy + summary.countNone &&
+        summary.factorSell > summary.factorBuy + 3
+      ) {
+        oper = "sell";
+        rule = "count & factor summary";
+      }
+    }
+    return { oper, rule };
+  } catch (err) {
+    console.log("Err stOne summaryRules: ", err);
+  }
+}
+
+function variationRules(oResult, userpair, currPrice) {
+  try {
+    let inputOper = oResult.oper;
+    //treat stop loss variation to last top price
+    let topVariation = (currPrice - userpair.stopLoss.topPrice) / userpair.stopLoss.topPrice;
+    if (inputOper === "sell" && currPrice < userpair.stopLoss.topPrice) {
+      if (Math.abs(topVariation) > userpair.stopLoss.topVariation) {
+        oResult.oper = inputOper;
+        oResult.rule = "stop loss";
+      } else {
+        oResult.oper = "none";
+        oResult.rule = "price variation smaller than stop loss";
+      }
+    }
+    //treat start gain variation to last bottom price
+    let bottomVariation =
+      (currPrice - userpair.stopLoss.bottomPrice) / userpair.stopLoss.bottomPrice;
+    if (inputOper === "buy" && currPrice > userpair.stopLoss.bottomPrice) {
+      if (Math.abs(bottomVariation) > userpair.stopLoss.bottomVariation) {
+        oResult.oper = inputOper;
+        oResult.rule = "start gain";
+      } else {
+        oResult.oper = "none";
+        oResult.rule = "price variation smaller than start gain";
+      }
+    }
+    // //treat variation to last operation price. Overlaps previous rules
+    // let variation = (currPrice - userpair.lastPrice) / userpair.lastPrice;
+    // if (Math.abs(variation) < userpair.minVariation) {
+    //   oResult.oper = "none";
+    //   oResult.rule = oResult.rule + " / price variation smaller than min configured";
+    // }
+    return oResult;
+  } catch (err) {
+    console.log("Err stOne variationRules: ", err);
+  }
 }
 
 function directionRules(oResult, userpair) {
@@ -117,60 +211,6 @@ function directionRules(oResult, userpair) {
     return oResult;
   } catch (err) {
     console.log("Err stOne directionRules: ", err);
-  }
-}
-
-function variationRules(oResult, userpair, currPrice) {
-  try {
-    //treat variation to last operation price
-    let variation = (currPrice - userpair.lastPrice) / userpair.lastPrice;
-    if (Math.abs(variation) < userpair.minVariation) {
-      oResult.oper = "none";
-      oResult.rule = "price variation smaller than minimum configured";
-    }
-    //treat stop loss variation to last top price
-    variation =
-      (currPrice - userpair.stopLoss.topPrice) / userpair.stopLoss.topPrice;
-    if (
-      currPrice < userpair.stopLoss.topPrice &&
-      Math.abs(variation) > userpair.stopLoss.variation
-    ) {
-      oResult.oper = "sell";
-      oResult.rule = "stop loss";
-    }
-    return oResult;
-  } catch (err) {
-    console.log("Err stOne variationRules: ", err);
-  }
-}
-
-function summaryRules(userpair, summary) {
-  try {
-    let oper = "none";
-    let rule = "none";
-    //treat summary rules
-    if (
-      userpair.summaryRule.count === "unanimous" &&
-      userpair.summaryRule.factor === "3"
-    ) {
-      if (
-        summary.countBuy > summary.countSell + summary.countNone &&
-        summary.factorBuy > summary.factorSell + 3
-      ) {
-        oper = "buy";
-        rule = "count & factor summary";
-      }
-      if (
-        summary.countSell > summary.countBuy + summary.countNone &&
-        summary.factorSell > summary.factorBuy + 3
-      ) {
-        oper = "sell";
-        rule = "count & factor summary";
-      }
-    }
-    return { oper, rule };
-  } catch (err) {
-    console.log("Err stOne symmaryRules: ", err);
   }
 }
 

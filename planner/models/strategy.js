@@ -24,7 +24,8 @@ var StrategySchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    config: mongoose.Schema.Types.Mixed,
+    configcalc: mongoose.Schema.Types.Mixed,
+    configrule: mongoose.Schema.Types.Mixed,
     lastresult: mongoose.Schema.Types.Mixed,
     lastsummary: mongoose.Schema.Types.Mixed
   },

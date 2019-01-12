@@ -18,12 +18,12 @@ services:
       - ctrader
 
   loadernode:
-    container_name: aperium-loader
+    container_name: loader
     build:
       context: ./loader
       args:
         - NODE_ENV=development
-    image: aperium-loader
+    image: trader-loader
     mem_limit: 2gb
     memswap_limit: 1gb
     mem_reservation: 1gb
@@ -38,12 +38,12 @@ services:
       - ctrader
 
   plannernode:
-    container_name: aperium-planner
+    container_name: planner
     build:
       context: ./planner
       args:
         - NODE_ENV=development
-    image: aperium-planner
+    image: trader-planner
     mem_limit: 2gb
     memswap_limit: 1gb
     mem_reservation: 1gb
@@ -58,12 +58,12 @@ services:
       - ctrader
 
   executernode:
-    container_name: aperium-executer
+    container_name: executer
     build:
       context: ./executer
       args:
         - NODE_ENV=development
-    image: aperium-executer
+    image: trader-executer
     mem_limit: 2gb
     memswap_limit: 1gb
     mem_reservation: 1gb

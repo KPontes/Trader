@@ -13,7 +13,10 @@ exports.putOrder = function(exchange, oper, symbol, type, amount, tk, sk) {
       }
       resolve(data);
     } catch (err) {
-      console.log("Err exchange putOrder: ", err);
+      console.log("Err exchange putOrder: ");
+      if (err.response) {
+        console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+      }
       reject(err);
     }
   });
@@ -27,7 +30,10 @@ exports.accountInfo = function(exchange, tk, sk) {
       }
       resolve(data);
     } catch (err) {
-      console.log("Err exchange accountInfo: ", err);
+      console.log("Err exchange accountInfo: ");
+      if (err.response) {
+        console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+      }
       reject(err);
     }
   });
@@ -41,7 +47,7 @@ exports.getKLines = function(exchange, pair, interval) {
       }
       resolve(data);
     } catch (err) {
-      console.log("Err exchange getKLines: ", err);
+      console.log("Err exchange getKLines: ");
       reject(err);
     }
   });

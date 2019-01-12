@@ -3,11 +3,17 @@
 # dependencies
 /node_modules
 /loader/node_modules
+
 /loader/.env
+/loader/.env.production
 /planner/node_modules
 /planner/.env
+/planner/.env.production
 /executer/node_modules
 /executer/.env
+/executer/.env.production
+aws*
+aws-loader-task-definition.json
 
 # testing
 /coverage

@@ -66,38 +66,43 @@ function saveItem(_name, _period, _params) {
   });
 }
 
-function saveLoad(_exchange, _pair, _loadPeriod, _name, loader) {
+function saveLoad(exchange, symbol, period, name, loader) {
   return new Promise(async function(resolve, reject) {
     try {
-      var iLoader = new ILoader();
-      iLoader.symbol = _pair;
-      iLoader.period = _loadPeriod;
-      iLoader.exchange = _exchange;
-      iLoader.name = _name;
-      switch (_name) {
+      var iloader = await ILoader.findOne({ exchange, symbol, period, name });
+      if (!iloader) {
+        iloader = new ILoader();
+        iloader.symbol = symbol;
+        iloader.period = period;
+        iloader.exchange = exchange;
+        iloader.name = name;
+        iloader.docs = [];
+      }
+
+      switch (name) {
         case "KLines":
-          iLoader.docs = await prepareSaveKlines(loader.klines);
+          iloader.docs = await prepareSaveKlines(loader.klines);
           break;
         case "SMA":
-          iLoader.docs = await prepareSave("sma", loader.sma);
+          iloader.docs = await prepareSave("sma", loader.sma);
           break;
         case "EMA":
-          iLoader.docs = await prepareSave("ema", loader.ema);
+          iloader.docs = await prepareSave("ema", loader.ema);
           break;
         case "RSI":
-          iLoader.docs = await prepareSave("rsi", loader.rsi);
+          iloader.docs = await prepareSave("rsi", loader.rsi);
           break;
         case "MACD":
-          iLoader.docs = await prepareSave("macd", loader.macd);
+          iloader.docs = await prepareSave("macd", loader.macd);
           break;
         case "BBANDS":
-          iLoader.docs = await prepareSave("bbands", loader.bbands);
+          iloader.docs = await prepareSave("bbands", loader.bbands);
           break;
         default:
-          console.log("wrong name on saveLoad", _name);
+          console.log("wrong name on saveLoad", name);
       }
-      await iLoader.save();
-      resolve(iLoader);
+      await iloader.save();
+      resolve(iloader);
     } catch (err) {
       console.log("Err indicator saveLoad: ", err);
       reject(err);

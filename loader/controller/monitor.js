@@ -31,14 +31,19 @@ Monitor.prototype.pooling = async function() {
           stop();
         }
         var result = await _this.executeLoader();
+        console.log(result);
       } catch (err) {
-        console.log("Err loader pooling", err.message);
-        logErr(err);
+        console.log("Err loader pooling");
+        console.log("err.response", err.response);
+        if (err.response && err.response.status === 429) {
+          console.log(`${err.response.status} Request rate limit`);
+          this.interval = 120000;
+        }
         //_this.stopExecute = true;
       }
     },
     _this.interval,
-    (options = { stopOnError: true })
+    (options = { stopOnError: false })
   );
 };
 
@@ -47,14 +52,13 @@ Monitor.prototype.executeLoader = function() {
   return new Promise(async function(resolve, reject) {
     try {
       await Signalizer.upsert("status", "loading");
-      //await iLoader.collection.drop();
-      await ILoader.deleteMany();
+      //await ILoader.deleteMany();
       const timer = ["1m", "1h"];
       const exchanges = ["binance"];
       const pairs = ["XRPUSDT", "ETHUSDT"];
       const priceList = await exchange.symbolPrice(exchanges[0]);
       await Prices.saveMany(exchanges[0], pairs, priceList);
-
+      let generated;
       for (let pair of pairs) {
         for (let time of timer) {
           let data = await exchange.getKLines(exchanges[0], pair, time);
@@ -63,15 +67,19 @@ Monitor.prototype.executeLoader = function() {
             console.log("Err executeLoader", data.message); //returned an error object
             throw data.message;
           }
-          await _this.generateIndicators(exchanges[0], pair, data, time);
+          generated = await _this.generateIndicators(exchanges[0], pair, data, time);
+          console.log(generated);
         }
       }
       await Signalizer.upsert("status", "ready");
-
-      console.log("OK executeLoader, " + moment().format("YYYYMMDD:HHmmss"));
-      resolve("OK executeLoader");
+      resolve("OK executeLoader, " + moment().format("YYYYMMDD:HHmmss"));
     } catch (err) {
-      console.log("Err executeLoader: ", err);
+      console.log("Err executeLoader: ");
+      if (err.Error) console.log(err.Error);
+      if (err.config) console.log(err.config.url);
+      if (err.response) {
+        console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+      }
       reject(err);
     }
   });
@@ -95,9 +103,7 @@ Monitor.prototype.generateIndicators = function(_exchg, _pair, _candles, _per) {
         if (it.name === "SMA" || it.name === "EMA") {
           for (let value of it.params) {
             var newItem = await _this.generateMAdata(it.name, arr, value);
-            it.name === "SMA"
-              ? loader.sma.push(newItem)
-              : loader.ema.push(newItem);
+            it.name === "SMA" ? loader.sma.push(newItem) : loader.ema.push(newItem);
           }
         }
         if (it.name === "KLines") {
@@ -128,9 +134,8 @@ Monitor.prototype.generateIndicators = function(_exchg, _pair, _candles, _per) {
         }
         await ctrIndicators.saveLoad(_exchg, _pair, _per, it.name, loader);
       }
-
       // newLoad = await ctrIndicators.saveLoad(_exchange, _pair, _period, loader);
-      resolve("OK");
+      resolve(`OK generateIndicators ${_pair} ${_per}`);
     } catch (err) {
       console.log("Err generateIndicators: ", err);
       reject(err);

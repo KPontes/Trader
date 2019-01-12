@@ -30,7 +30,8 @@ var UserPairSchema = new mongoose.Schema({
     required: true,
     default: "1m"
   },
-  config: mongoose.Schema.Types.Mixed,
+  configcalc: mongoose.Schema.Types.Mixed,
+  configrule: mongoose.Schema.Types.Mixed,
   summaryRule: {
     type: mongoose.Schema.Types.Mixed,
     default: { count: "unanimous", factor: "3" }
@@ -46,7 +47,12 @@ var UserPairSchema = new mongoose.Schema({
   lastPrice: { type: Number, default: 0.0001 },
   stopLoss: {
     type: mongoose.Schema.Types.Mixed,
-    default: { variation: 0.005, topPrice: 0.0001 }
+    default: {
+      topVariation: 0.005,
+      topPrice: 0.0001,
+      bottomVariation: 0.01,
+      bottomPrice: Number.MAX_SAFE_INTEGER
+    }
   }
 });
 
@@ -86,7 +92,6 @@ var UserSchema = new mongoose.Schema(
       type: Date,
       required: true
     },
-    config: mongoose.Schema.Types.Mixed,
     monitor: { type: [UserPairSchema], default: [] }
   },
   {

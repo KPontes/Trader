@@ -74,16 +74,23 @@ function saveSymbol(requestobj) {
         factor: requestobj.summaryfactor
       };
       userpair.stopLoss = {
-        variation: requestobj.stoploss,
-        topPrice: 0.0001
+        topVariation: requestobj.stoploss,
+        topPrice: 0.0001,
+        bottomVariation: requestobj.stoploss * 2,
+        bottomPrice: Number.MAX_SAFE_INTEGER
       };
-      let config = {};
+      let configcalc = {};
+      let configrule = {};
       Object.entries(requestobj).map(element => {
-        if (element[0].substring(0, 6) === "config") {
-          config[element[0].substring(6)] = element[1];
+        if (element[0].substring(0, 5) === "calc-") {
+          configcalc[element[0].substring(5)] = element[1];
+        }
+        if (element[0].substring(0, 5) === "rule-") {
+          configrule[element[0].substring(5)] = element[1];
         }
       });
-      userpair.config = config;
+      userpair.configcalc = configcalc;
+      userpair.configrule = configrule;
       theuser.monitor.push(userpair);
       await theuser.save();
       resolve(theuser);
