@@ -21,7 +21,8 @@ var TradeSchema = new mongoose.Schema(
     },
     orderType: { type: String, enum: ["MARKET", "LIMIT"], required: true },
     price: { type: Number, required: true },
-    side: { type: String, enum: ["BUY", "SELL"], required: true }
+    side: { type: String, enum: ["BUY", "SELL"], required: true },
+    log: mongoose.Schema.Types.Mixed
   },
   {
     timestamps: true

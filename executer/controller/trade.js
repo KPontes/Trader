@@ -20,15 +20,19 @@ function matchPrice(exchange, symbol, pricelist) {
 exports.execute = function(user, index, priceList, stgResults) {
   return new Promise(async function(resolve, reject) {
     try {
+      console.log("**********************************************");
+      let summary = stgResults.summary;
       let userpair = user.monitor[index];
       let price = matchPrice(user.exchange, userpair.symbol, priceList);
-      console.log("**********************************************");
-      console.log("Result", stgResults.result);
-      console.log("Summary", stgResults.summary);
-      console.log("Price " + userpair.symbol, price);
-      console.log("Top ", userpair.stopLoss.topPrice);
-      console.log("Bottom ", userpair.stopLoss.bottomPrice);
-      let operation = await stgOne.defineOperation(user, userpair, stgResults.summary, price);
+      let tradeLog = {
+        symbol: userpair.symbol,
+        result: stgResults.result,
+        summary: stgResults.summary,
+        price: price,
+        top: userpair.stopLoss.topPrice,
+        bottom: userpair.stopLoss.bottomPrice
+      };
+      let operation = await stgOne.defineOperation(user, userpair, summary, price, tradeLog);
       let order = await stgOne.makeOrder(operation, user, index, price);
       resolve("OK Trade Execute");
     } catch (err) {

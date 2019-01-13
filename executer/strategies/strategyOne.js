@@ -14,6 +14,7 @@ function makeOrder(operation, user, index, currPrice) {
       const symbol = userpair.symbol;
       const ordertype = "MARKET";
       const oper = operation.oper;
+      const log = operation.log;
       let upduser = await updateStopLoss(user, index, currPrice);
       let order = {};
       if (oper !== "none") {
@@ -31,7 +32,8 @@ function makeOrder(operation, user, index, currPrice) {
           ordertype,
           oper,
           currPrice,
-          amount
+          amount,
+          log
         );
       }
       resolve(order);
@@ -118,17 +120,18 @@ function updUserPostOrder(oper, user, index, currPrice) {
   });
 }
 
-function defineOperation(user, userpair, summary, currPrice) {
+function defineOperation(user, userpair, summary, currPrice, tradeLog) {
   return new Promise(async function(resolve, reject) {
     try {
       let oResult = {};
       oResult = summaryRules(userpair, summary);
-      console.log("summaryRules", oResult);
+      tradeLog.summaryRules = oResult;
       oResult = variationRules(oResult, userpair, currPrice);
-      console.log("variationRules", oResult);
+      tradeLog.variationRules = oResult;
       oResult = directionRules(oResult, userpair);
-      console.log("directionRules", oResult);
-      resolve(oResult);
+      tradeLog.directionRules = oResult;
+      console.log(tradeLog);
+      resolve({ oResult, log: tradeLog });
     } catch (err) {
       console.log("Err stOne defineOperation: ", err);
       reject(err);
@@ -168,7 +171,10 @@ function variationRules(oResult, userpair, currPrice) {
     let inputOper = oResult.oper;
     //treat stop loss variation to last top price
     let topVariation = (currPrice - userpair.stopLoss.topPrice) / userpair.stopLoss.topPrice;
-    if (inputOper === "sell" && currPrice < userpair.stopLoss.topPrice) {
+    if (
+      (inputOper === "sell" && currPrice < userpair.stopLoss.topPrice) ||
+      currPrice < userpair.lastPrice
+    ) {
       if (Math.abs(topVariation) > userpair.stopLoss.topVariation) {
         oResult.oper = inputOper;
         oResult.rule = "stop loss";
@@ -181,7 +187,10 @@ function variationRules(oResult, userpair, currPrice) {
     let bottomVariation =
       (currPrice - userpair.stopLoss.bottomPrice) / userpair.stopLoss.bottomPrice;
     if (inputOper === "buy" && currPrice > userpair.stopLoss.bottomPrice) {
-      if (Math.abs(bottomVariation) > userpair.stopLoss.bottomVariation) {
+      if (
+        Math.abs(bottomVariation) > userpair.stopLoss.bottomVariation ||
+        currPrice > userpair.lastPrice
+      ) {
         oResult.oper = inputOper;
         oResult.rule = "start gain";
       } else {
