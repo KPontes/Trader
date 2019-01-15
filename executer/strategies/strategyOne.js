@@ -123,15 +123,14 @@ function updUserPostOrder(oper, user, index, currPrice) {
 function defineOperation(user, userpair, summary, currPrice, tradeLog) {
   return new Promise(async function(resolve, reject) {
     try {
-      let oResult = {};
-      oResult = summaryRules(userpair, summary);
-      tradeLog.summaryRules = oResult;
-      oResult = variationRules(oResult, userpair, currPrice);
-      tradeLog.variationRules = oResult;
-      oResult = directionRules(oResult, userpair);
-      tradeLog.directionRules = oResult;
-      console.log(tradeLog);
-      resolve({ oResult, log: tradeLog });
+      let srules = summaryRules(userpair, summary);
+      tradeLog.summaryRules = Object.assign({}, srules);
+      let vrules = variationRules(srules, userpair, currPrice);
+      tradeLog.variationRules = Object.assign({}, vrules);
+      let drules = directionRules(vrules, userpair);
+      tradeLog.directionRules = Object.assign({}, drules);
+      console.log("defineOperation", tradeLog);
+      resolve({ oper: drules.oper, rule: drules.rule, log: tradeLog });
     } catch (err) {
       console.log("Err stOne defineOperation: ", err);
       reject(err);
@@ -166,16 +165,17 @@ function summaryRules(userpair, summary) {
   }
 }
 
-function variationRules(oResult, userpair, currPrice) {
+function variationRules(previousResult, userpair, currPrice) {
   try {
+    let oResult = Object.assign({}, previousResult); //so I dont modify the input parameter obj
     let inputOper = oResult.oper;
     //treat stop loss variation to last top price
     let topVariation = (currPrice - userpair.stopLoss.topPrice) / userpair.stopLoss.topPrice;
-    if (
-      (inputOper === "sell" && currPrice < userpair.stopLoss.topPrice) ||
-      currPrice < userpair.lastPrice
-    ) {
-      if (Math.abs(topVariation) > userpair.stopLoss.topVariation) {
+    if (inputOper === "sell" && currPrice < userpair.stopLoss.topPrice) {
+      if (
+        Math.abs(topVariation) > userpair.stopLoss.topVariation ||
+        currPrice < userpair.lastPrice
+      ) {
         oResult.oper = inputOper;
         oResult.rule = "stop loss";
       } else {
@@ -210,8 +210,9 @@ function variationRules(oResult, userpair, currPrice) {
   }
 }
 
-function directionRules(oResult, userpair) {
+function directionRules(previousResult, userpair) {
   try {
+    let oResult = Object.assign({}, previousResult); //so I dont modify the input parameter obj
     //treat direction
     if (oResult.oper === userpair.lastDirection.toLowerCase()) {
       oResult.oper = "none";

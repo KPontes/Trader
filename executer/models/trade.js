@@ -37,7 +37,8 @@ TradeSchema.statics.insert = async function(
   orderType,
   side,
   price,
-  quantity
+  quantity,
+  log
 ) {
   return new Promise(async function(resolve, reject) {
     try {
@@ -49,6 +50,7 @@ TradeSchema.statics.insert = async function(
       trade.side = side.toUpperCase();
       trade.price = price;
       trade.quantity = quantity;
+      trade.log = log;
       await trade.save();
       resolve(trade);
     } catch (err) {
