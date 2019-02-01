@@ -6,6 +6,7 @@ const { mongoose } = require("./db/mongoose.js");
 
 const Monitor = require("./controller/monitor.js");
 const ctrIndicators = require("./controller/indicators.js");
+const ctrSettings = require("./controller/settings.js");
 const { Prices } = require("./models/prices");
 
 const app = express();
@@ -43,6 +44,16 @@ app.post("/loader", async (req, res) => {
 app.post("/addindicators", async (req, res) => {
   try {
     var result = await ctrIndicators.saveIndicators(req);
+    res.status(200).send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+app.post("/addsetting", async (req, res) => {
+  try {
+    var result = await ctrSettings.save(req);
     res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);

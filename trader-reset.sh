@@ -1,7 +1,7 @@
 #!/bin/bash
 # restart compose
 docker-compose down
-cd ./client/public
-docker image build -t trader-web .
-cd ../../
+cd ./aperiumwww
+docker image build -t aperium-web .
+cd ..
 docker-compose up -d

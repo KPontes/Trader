@@ -38,7 +38,7 @@ function makeOrder(operation, user, index, currPrice) {
       }
       resolve(order);
     } catch (err) {
-      console.log("Err makeOrder ");
+      console.log("Err makeOrder ", err);
       reject(err);
     }
   });
@@ -183,14 +183,13 @@ function variationRules(previousResult, userpair, currPrice) {
         oResult.rule = "price variation smaller than stop loss";
       }
     }
-    //treat start gain variation to last bottom price
+    //treat start gain variation to last bottom price. Delayed version to buy
     let bottomVariation =
       (currPrice - userpair.stopLoss.bottomPrice) / userpair.stopLoss.bottomPrice;
     if (inputOper === "buy" && currPrice > userpair.stopLoss.bottomPrice) {
-      if (
-        Math.abs(bottomVariation) > userpair.stopLoss.bottomVariation ||
-        currPrice > userpair.lastPrice
-      ) {
+      if (Math.abs(bottomVariation) > userpair.stopLoss.bottomVariation) {
+        //excluded condition (or currPrice > userpair.lastPrice).
+        //Now use stoploss small, startgain large
         oResult.oper = inputOper;
         oResult.rule = "start gain";
       } else {

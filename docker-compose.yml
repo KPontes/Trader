@@ -80,10 +80,10 @@ services:
   nginxweb:
     container_name: webserver
     build:
-      context: ./client/public
+      context: ./aperiumwww
       args:
         - NODE_ENV=development
-    image: trader-web
+    image: aperium-web
     ports:
       - '80:80' # expose 80 on host and sent to 80 in container
     networks:

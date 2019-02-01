@@ -5,3 +5,5 @@
 * (5) Executer strategyOne.js - makeOrder - set new function to evaluate balance boundaries in USD and also BTC.
 
 * (4) Colocar on/off do loader e executer no banco.
+
+* (5) Restrict maps

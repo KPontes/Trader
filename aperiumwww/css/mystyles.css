@@ -1,0 +1,35 @@
+/*Link hover*/
+a.menulink:link,
+a.menulink:visited {
+  text-decoration: none;
+}
+a.menulink:hover {
+  /*text-decoration: underline overline;*/
+  color: yellow;
+  font-size: 110%;
+}
+/*Fonts*/
+.setFont {
+  font-family: verdana;
+}
+/*UL LI*/
+.setUlCircle {
+  list-style-type: circle;
+}
+.setUlSquare {
+  list-style-type: square;
+}
+/*DIV Position*/
+.center-div a,
+.center-div font {
+  position: relative;
+  top: 40%;
+  transform: perspective(1px) translateY(-50%);
+}
+/* Set the size of the div element that contains the map */
+#map {
+  height: 300px;
+  /* The height is 400 pixels */
+  width: 100%;
+  /* The width is the width of the web page */
+}

@@ -11,6 +11,7 @@ const rsi = require("./rsi.js");
 const bbands = require("./bbands.js");
 const macd = require("./macd.js");
 const ctrIndicators = require("./indicators.js");
+const { LoaderSettings } = require("../models/loaderSettings.js");
 
 ("use strict");
 
@@ -52,22 +53,20 @@ Monitor.prototype.executeLoader = function() {
   return new Promise(async function(resolve, reject) {
     try {
       await Signalizer.upsert("status", "loading");
-      //await ILoader.deleteMany();
-      const timer = ["1m", "1h"];
-      const exchanges = ["binance"];
-      const pairs = ["XRPUSDT", "ETHUSDT"];
-      const priceList = await exchange.symbolPrice(exchanges[0]);
-      await Prices.saveMany(exchanges[0], pairs, priceList);
+      const xchange = "binance";
+      const loaderset = await LoaderSettings.findOne({ exchange: xchange });
+      const priceList = await exchange.symbolPrice(loaderset.exchange);
+      await Prices.saveMany(xchange, loaderset.symbols, priceList);
       let generated;
-      for (let pair of pairs) {
-        for (let time of timer) {
-          let data = await exchange.getKLines(exchanges[0], pair, time);
+      for (let pair of loaderset.symbols) {
+        for (let timeInterval of loaderset.periods) {
+          let data = await exchange.getKLines(loaderset.exchange, pair, timeInterval);
           if (data.length < 499) throw { code: 300, msg: "no data" };
           if (data.code) {
             console.log("Err executeLoader", data.message); //returned an error object
             throw data.message;
           }
-          generated = await _this.generateIndicators(exchanges[0], pair, data, time);
+          generated = await _this.generateIndicators(loaderset.exchange, pair, data, timeInterval);
           console.log(generated);
         }
       }

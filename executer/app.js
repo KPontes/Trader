@@ -5,11 +5,19 @@ const bodyParser = require("body-parser");
 const { mongoose } = require("./db/mongoose.js");
 const Monitor = require("./controller/monitor.js");
 const user = require("./controller/user.js");
+const { Plan } = require("./models/plan.js");
+const { User } = require("./models/user.js");
+const { LoaderSettings } = require("./models/loaderSettings.js");
 
 const app = express();
 
 app.use(bodyParser.json());
-
+app.use(function(req, res, next) {
+  //enable CORS
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
 app.get("/express", (req, res) => {
   console.log("executer welcome message");
   res.send({
@@ -29,6 +37,16 @@ app.post("/executer", async (req, res) => {
   } catch (e) {
     console.log(`app Error: ${e.response.status} - ${e.response.statusText} - ${e.response.data}`);
     res.status(400).send(e.response.data);
+  }
+});
+
+app.post("/addplan", async (req, res) => {
+  try {
+    var result = await Plan.save(req.body);
+    res.status(200).send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
   }
 });
 
@@ -56,6 +74,39 @@ app.post("/addusersymbol", async (req, res) => {
   try {
     var result = await user.saveSymbol(req.body);
     res.status(200).send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+app.get("/getuser", async (req, res) => {
+  try {
+    var user = await User.findOne({ email: req.query.email });
+    //var userObj = user.toObject();
+    res.status(200).send(user);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+app.get("/getsetting", async (req, res) => {
+  try {
+    var loader = await LoaderSettings.findOne({ exchange: req.query.exchange });
+    var loaderObject = loader.toObject();
+    res.status(200).send(loaderObject);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+app.get("/getplans", async (req, res) => {
+  try {
+    var plan = await Plan.find().sort("monthPrice");
+    //var planObject = plan.toObject();
+    res.status(200).send(plan);
   } catch (e) {
     console.log("Error: ", e);
     res.status(400).send(e);
