@@ -1,14 +1,16 @@
 import React from "react";
-import { Link } from "react-router-dom";
 
 import Account from "./account";
-
-const logged = true;
+import Login from "./login";
 
 const Home = logged => {
+  logged = false;
   var display;
+
   if (logged) {
     display = <Account logged={logged} />;
+  } else {
+    display = <Login />;
   }
   return display;
 };

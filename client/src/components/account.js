@@ -20,7 +20,7 @@ class Account extends Component {
     axios({
       method: "get",
       baseURL: sysconfig.EXECUTER_URI,
-      url: "/getuser?email=krishnanpontes@gmail.com"
+      url: "/getme?email=krishnanpontes@gmail.com"
     })
       .then(function(response) {
         if (response.data) {

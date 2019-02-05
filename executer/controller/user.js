@@ -29,7 +29,8 @@ function save(requestobj) {
   return new Promise(async function(resolve, reject) {
     try {
       let newuser = new User();
-      newuser.password = scrypto.createhash(requestobj.password.trim());
+      //newuser.password = scrypto.createhash(requestobj.password.trim());
+      newuser.password = requestobj.password.trim();
       newuser.name = requestobj.name.trim();
       newuser.email = requestobj.email.trim();
       newuser.exchange = requestobj.exchange.trim();
