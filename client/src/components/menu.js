@@ -1,22 +1,18 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-const Menu = logged => {
+const Menu = props => {
   var display;
-  if (logged) {
+  if (props.logged) {
     display = (
-      <div className="text-right">
-        <br />
-        <Link className="text-secondary mr-3" to="/home">
+      <div className="text-right mb-3">
+        <Link className="text-secondary mr-3" to="/">
           Account
         </Link>
         <Link className="text-secondary mr-3" to="/plans">
-          Plan configuration
+          Performance Track
         </Link>
-        <Link className="text-secondary mr-3" to="/plans">
-          Performance track
-        </Link>
-        <Link className="text-secondary mr-3" to="/plans">
+        <Link className="text-secondary mr-3" to={"/signout"}>
           Sign-out
         </Link>
       </div>
@@ -25,8 +21,11 @@ const Menu = logged => {
     display = (
       <div className="text-right">
         <br />
-        <Link className="text-secondary mr-3" to="/plans">
-          Sign-up / Login
+        <Link className="text-secondary mr-3" to="/">
+          Login
+        </Link>
+        <Link className="text-secondary mr-3" to={"/signup"}>
+          Register
         </Link>
       </div>
     );

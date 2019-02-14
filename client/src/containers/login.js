@@ -1,14 +1,17 @@
 import React, { Component } from "react";
 import axios from "axios";
 import validator from "validator";
+import { Link } from "react-router-dom";
+import { connect } from "react-redux";
+import { bindActionCreators } from "redux";
 
+import { selectToken } from "../actions/root";
 import sysconfig from "../config";
 
 class Login extends Component {
   constructor(props) {
     super(props);
     this.handleLoginClick = this.handleLoginClick.bind(this);
-    this.handleRegisterClick = this.handleRegisterClick.bind(this);
     this.onInputChange = this.onInputChange.bind(this);
     this.state = {
       user: {},
@@ -28,6 +31,7 @@ class Login extends Component {
 
   handleLoginClick(event) {
     try {
+      //event.preventDefault();
       if (!validator.isEmail(this.state.email)) {
         throw new Error("Invalid email");
       }
@@ -44,7 +48,7 @@ class Login extends Component {
       })
         .then(function(response) {
           if (response.status === 200) {
-            console.log("Success");
+            _this.props.selectToken(response.headers["x-auth"]);
           }
           _this.setState({
             btnLogin: "Login",
@@ -60,14 +64,7 @@ class Login extends Component {
           });
         });
     } catch (e) {
-      console.log(e);
-    }
-  }
-
-  handleRegisterClick(event) {
-    try {
-      console.log("register clicked");
-    } catch (e) {
+      alert("Error: " + e.message);
       console.log(e);
     }
   }
@@ -106,18 +103,30 @@ class Login extends Component {
           >
             {this.state.btnLogin}
           </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={this.state.isBtnDisabled}
-            onClick={event => this.handleRegisterClick()}
-          >
+          <Link className="btn btn-secondary" to="/signup">
             Register
-          </button>
+          </Link>
         </div>
       </form>
     );
   }
 }
 
-export default Login;
+function mapStateToProps(state) {
+  //whatever is returned will show as props inside this container
+  return {
+    token: state.activeToken
+  };
+}
+
+//anything returned from this function will become props on this container
+function mapDispatchToProps(dispatch) {
+  //whenever selectToken is called, the result will be passed to all reducers
+  return bindActionCreators({ selectToken: selectToken }, dispatch);
+}
+
+//promote Login from a component to a container with added props activeToken
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Login);

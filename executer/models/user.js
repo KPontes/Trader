@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
+const moment = require("moment");
 const jwt = require("jsonwebtoken");
+const scrypto = require("../utils/simplecrypto.js");
 const _ = require("lodash");
 const bcrypt = require("bcryptjs");
 
@@ -9,55 +11,84 @@ const OrderDirection = Object.freeze({
   none: "none"
 });
 
+const AmountSelector = Object.freeze({
+  BTC: "BTC",
+  USD: "USD",
+  PERCENT: "PERCENT"
+});
+
 const UserStatus = Object.freeze({
   activeOn: "activeOn",
   activeOff: "activeOff",
-  disabled: "disabled",
+  registered: "registered",
+  validated: "validated",
   deleted: "deleted"
 });
 
-var UserPairSchema = new mongoose.Schema({
-  symbol: {
-    type: String,
-    required: true,
-    minlength: 6,
-    trim: true
-  },
-  strategy: {
-    type: String,
-    required: true,
-    default: "StrategyOne"
-  },
-  period: {
-    type: String,
-    required: true,
-    default: "1m"
-  },
-  configcalc: mongoose.Schema.Types.Mixed,
-  configrule: mongoose.Schema.Types.Mixed,
-  summaryRule: {
-    type: mongoose.Schema.Types.Mixed,
-    default: { count: "unanimous", factor: "3" }
-  },
-  schedule: { type: [Number], default: [1] },
-  maxAmount: { type: Number, default: 0 },
-  lastDirection: {
-    type: String,
-    enum: Object.values(OrderDirection),
-    default: OrderDirection.none
-  },
-  minVariation: { type: Number, default: 0.005 },
-  lastPrice: { type: Number, default: 0.0001 },
-  stopLoss: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {
-      topVariation: 0.005,
-      topPrice: 0.0001,
-      bottomVariation: 0.01,
-      bottomPrice: Number.MAX_SAFE_INTEGER
+var UserPairSchema = new mongoose.Schema(
+  {
+    symbol: {
+      type: String,
+      required: true,
+      minlength: 6,
+      trim: true,
+      default: "BTCUSDT"
+    },
+    strategy: {
+      type: String,
+      required: true,
+      default: "StrategyOne"
+    },
+    period: {
+      type: String,
+      required: true,
+      default: "1m"
+    },
+    largeInterval: {
+      type: String,
+      default: "1h"
+    },
+    mode: {
+      type: String,
+      enum: ["test", "real"],
+      required: true,
+      default: "test"
+    },
+    configcalc: mongoose.Schema.Types.Mixed,
+    configrule: mongoose.Schema.Types.Mixed,
+    summaryRule: {
+      type: mongoose.Schema.Types.Mixed,
+      default: { count: "unanimous", factor: "3" }
+    },
+    schedule: { type: [Number], default: [1] },
+    maxAmount: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        selector: AmountSelector.PERCENT,
+        value: 100
+      }
+    },
+    lastDirection: {
+      type: String,
+      enum: Object.values(OrderDirection),
+      default: OrderDirection.none
+    },
+    minVariation: { type: Number, default: 0.005 },
+    lastPrice: { type: Number, default: 0.0001 },
+    stopLoss: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        topVariation: 0.005,
+        topPrice: 0.0001,
+        bottomVariation: 0.01,
+        bottomPrice: Number.MAX_SAFE_INTEGER
+      }
     }
+  },
+  {
+    timestamps: true
   }
-});
+);
 
 var UserSchema = new mongoose.Schema(
   {
@@ -66,7 +97,7 @@ var UserSchema = new mongoose.Schema(
       required: true,
       unique: true
     },
-    name: {
+    username: {
       type: String,
       required: true
     },
@@ -89,6 +120,10 @@ var UserSchema = new mongoose.Schema(
         token: {
           type: String,
           required: true
+        },
+        createdAt: {
+          type: Date,
+          default: new Date()
         }
       }
     ],
@@ -99,15 +134,26 @@ var UserSchema = new mongoose.Schema(
       trim: true
     },
     tk: {
-      type: String
+      type: String,
+      default: ""
     },
     sk: {
-      type: String
+      type: String,
+      default: ""
     },
     status: {
       type: String,
       enum: Object.values(UserStatus),
-      default: UserStatus.activeOff
+      default: UserStatus.registered
+    },
+    comercial: {
+      type: mongoose.Schema.Types.Mixed,
+      default: { plan: "FREE", priceUSD: 0, payInterval: 0, tradesLimit: 90 }
+    },
+    validation: { type: String, default: "" },
+    payments: {
+      type: [{ how: String, howMuch: Number, when: Date }],
+      default: []
     },
     validtil: {
       type: Date,
@@ -133,7 +179,7 @@ UserSchema.methods.toJSON = function() {
   //Allow only picked properties
   var user = this;
   var userObject = user.toObject(); //cast the mongoose user to a regular Object
-  return _.omit(userObject, ["password", "tokens", "tk", "sk"]);
+  return _.omit(userObject, ["password", "tokens"]);
 };
 
 UserSchema.methods.generateAuthToken = function() {
@@ -149,22 +195,46 @@ UserSchema.methods.generateAuthToken = function() {
   });
 };
 
-UserSchema.methods.removeToken = function(token) {
-  var user = this;
-  return user.update({
+UserSchema.methods.removeToken = async function(token) {
+  let deletedDocs = await User.updateMany({
+    $pull: {
+      tokens: {
+        createdAt: { $lt: moment().subtract(1, "day") }
+      }
+    }
+  });
+  deletedDocs = await User.updateMany({
     $pull: {
       tokens: {
         token: token
       }
     }
   });
+  return deletedDocs;
+};
+
+UserSchema.statics.findByValidation = async function(token) {
+  try {
+    var user = await User.findOne({ validation: token.toString().trim(), status: "registered" });
+    if (!user) {
+      return false;
+    }
+    if (scrypto.comparehash(user._id.toString(), token)) {
+      user.validation = "";
+      user.status = UserStatus.validated;
+      await user.save();
+      return true;
+    }
+    return false;
+  } catch (e) {
+    return Promise.reject("email validation error", e);
+  }
 };
 
 UserSchema.statics.findByToken = function(token) {
   //this is a Model method instead of instance method.
   var User = this; //uppercase as for model methods
   var decoded;
-
   try {
     decoded = jwt.verify(token, process.env.SYSPD);
   } catch (e) {

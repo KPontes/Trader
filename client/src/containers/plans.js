@@ -1,7 +1,10 @@
 import React, { Component } from "react";
 import axios from "axios";
 import validator from "validator";
+import { connect } from "react-redux";
+import { bindActionCreators } from "redux";
 
+import { selectUser } from "../actions/root";
 import sysconfig from "../config";
 
 class Plans extends Component {
@@ -9,8 +12,7 @@ class Plans extends Component {
     super(props);
     this.handleSendClick = this.handleSendClick.bind(this);
     this.state = {
-      plans: [],
-      settings: []
+      plans: []
     };
   }
 
@@ -29,48 +31,18 @@ class Plans extends Component {
       .catch(function(error) {
         console.log(error);
       });
-    axios({
-      method: "get",
-      baseURL: sysconfig.EXECUTER_URI,
-      url: "/getsetting?exchange=binance"
-    })
-      .then(function(response) {
-        if (response.data) {
-          _this.setState({ settings: response.data });
-        }
-      })
-      .catch(function(error) {
-        console.log(error);
-      });
-  }
-
-  getSettings() {
-    if (!this.state.settings.exchange) {
-      return <div> waiting api settings results</div>;
-    } else {
-      let setting = this.state.settings;
-      let symbols = setting.symbols.map(element => {
-        return "[" + element + "]  ";
-      });
-      let intervals = setting.periods.map(element => {
-        return "[" + element + "]  ";
-      });
-      return (
-        <div className="row">
-          <div className="col-md-2">Exchange: {setting.exchange}</div>
-          <div className="col-md-7">Tokens: {symbols}</div>
-          <div className="col-md-3">Intervals: {intervals}</div>
-        </div>
-      );
-    }
   }
 
   planList() {
-    if (Array.isArray(this.state.plans) && this.state.plans.length > 0) {
+    if (this.props.user && Array.isArray(this.state.plans) && this.state.plans.length > 0) {
       let listItems = this.state.plans.map(element => {
+        let btnName =
+          element.name.toUpperCase() === this.props.user.comercial.plan.toUpperCase()
+            ? "Current"
+            : "Select";
         return (
-          <div className="col-md-3">
-            <div className="card border-secondary mb-3" style={{ maxWidth: "18rem" }}>
+          <div className="col-md-6">
+            <div className="card border-secondary mb-3">
               <div className="card-header">{element.name}</div>
               <div className="card-body">
                 <h5 className="card-title">Max tokens: {element.maxSymbols}</h5>
@@ -81,10 +53,6 @@ class Plans extends Component {
                   Monthly: {Number(element.monthPrice).toFixed(2)}
                   <br />
                   Quarterly: {Number(element.quarterPrice).toFixed(2)}
-                  <br />
-                  Semiannual: {Number(element.halfPrice).toFixed(2)}
-                  <br />
-                  Annually: {Number(element.yearPrice).toFixed(2)}
                 </p>
                 <center>
                   <button
@@ -92,7 +60,7 @@ class Plans extends Component {
                     id={element.name}
                     onClick={event => this.handleSendClick()}
                   >
-                    Purchase
+                    {btnName}
                   </button>
                 </center>
               </div>
@@ -117,14 +85,9 @@ class Plans extends Component {
   }
 
   render() {
-    console.log("State", this.state);
-    const setting = this.getSettings();
-    console.log("setting", setting);
     const planList = this.planList();
-    console.log("planList", planList);
     return (
-      <div className="container-fluid">
-        {setting}
+      <div>
         <hr />
         <div className="row">{planList}</div>
       </div>
@@ -132,4 +95,21 @@ class Plans extends Component {
   }
 }
 
-export default Plans;
+function mapStateToProps(state) {
+  //whatever is returned will show as props inside this container
+  return {
+    user: state.activeUser
+  };
+}
+
+//anything returned from this function will become props on this container
+function mapDispatchToProps(dispatch) {
+  //whenever selectToken is called, the result will be passed to all reducers
+  return bindActionCreators({ selectUser: selectUser }, dispatch);
+}
+
+//promote Login from a component to a container with added props activeToken
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Plans);

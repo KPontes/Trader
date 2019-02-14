@@ -1,0 +1,9 @@
+.cursor-pointer {
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+.presentation-div {
+  background-color: #ffeecc;
+  border: 1px solid black;
+  padding: 5px;
+}
