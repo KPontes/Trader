@@ -151,6 +151,10 @@ var UserSchema = new mongoose.Schema(
       default: { plan: "FREE", priceUSD: 0, payInterval: 0, tradesLimit: 90 }
     },
     validation: { type: String, default: "" },
+    payments: {
+      type: [{ how: String, howMuch: Number, when: Date }],
+      default: []
+    },
     validtil: {
       type: Date,
       required: true

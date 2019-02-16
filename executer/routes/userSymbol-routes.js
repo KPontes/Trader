@@ -8,7 +8,17 @@ var { authenticate } = require("../middleware/authenticate.js");
 
 router.post("/add", authenticate, async (req, res) => {
   try {
-    var result = await ctrUserSymbol.addSymbol(req.body);
+    var result = await ctrUserSymbol.add(req.body);
+    res.status(200).send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+router.delete("/del", authenticate, async (req, res) => {
+  try {
+    var result = await ctrUserSymbol.del(req.body);
     res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);
@@ -23,6 +33,17 @@ router.post("/changesymbol", authenticate, async (req, res) => {
   } catch (e) {
     console.log("Error: ", e);
     res.status(400).send(e);
+  }
+});
+
+router.patch("/numbers", authenticate, async (req, res) => {
+  try {
+    var result = await ctrUserSymbol.updateNumbers(req.body);
+    res.status(200).send(result);
+  } catch (e) {
+    let returnErr = new Error();
+    returnErr.message = e;
+    res.status(400).send(returnErr);
   }
 });
 

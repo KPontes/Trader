@@ -39,7 +39,7 @@ function add(requestobj) {
       newuser.validtil = moment().add(1, "month");
       await newuser.save();
       newuser = await createValidation(newuser._id);
-      let usersymbol = ctrusersymbol.addSymbol({
+      let usersymbol = ctrusersymbol.add({
         email: newuser.email,
         usedefault: true,
         symbol: "BTCUSDT"
@@ -87,7 +87,35 @@ function updateKeys(requestobj) {
   });
 }
 
+function play(reqobj) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      let oneuser = await User.findOne({ email: reqobj.email });
+      if (!oneuser) {
+        throw "email not found";
+      }
+      let action = reqobj.action === "start" ? "activeOn" : "activeOff";
+      //perform validations
+      let msg = "OK";
+      if (oneuser.monitor.length === 0) msg = "No tokens configured";
+      if (oneuser.tk.length < 64 || oneuser.sk.length < 64) msg = "No API Keys configured";
+      if (oneuser.status === "registered") msg = "User email not validated";
+      if (oneuser.validtil < new Date()) msg = "Plan validity expired";
+      if (msg !== "OK") {
+        throw msg;
+      }
+      oneuser.status = action;
+      await oneuser.save();
+      resolve(oneuser);
+    } catch (err) {
+      console.log("Err createValidation: ", err);
+      reject(err);
+    }
+  });
+}
+
 module.exports = {
+  play: play,
   add: add,
   updateKeys: updateKeys,
   getBalance: getBalance,

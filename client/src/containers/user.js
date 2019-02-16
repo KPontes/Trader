@@ -11,6 +11,7 @@ class User extends Component {
   constructor(props) {
     super(props);
     this.handleResendClick = this.handleResendClick.bind(this);
+    this.handleBtnClick = this.handleBtnClick.bind(this);
     this.state = {
       msg: ""
     };
@@ -82,33 +83,81 @@ class User extends Component {
     }
   }
 
-  setActions(msg) {
-    let result;
-    if (msg !== "OK") {
-      return (
-        <div className="col-md-12 text-danger" align="center">
-          {msg}{" "}
+  setActions(enabled, verifyMsg) {
+    let msgIn = verifyMsg === "OK" ? "" : verifyMsg;
+    let msg;
+    if (msgIn !== "") {
+      msg = (
+        <div className="text-danger" align="center">
+          {msgIn}
         </div>
       );
     }
-    if (this.props.user.status === "activeOn") {
-      result = (
-        <div className="col-md-12" align="center">
-          <button type="button" className="btn btn-danger" align="center">
-            Stop Trading
-          </button>
+
+    let btn;
+    if (this.props.user && this.props.user.status === "activeOn") {
+      btn = (
+        <div className="row">
+          <div className="col-md-12" align="center">
+            <button
+              type="button"
+              id="stop"
+              className="btn btn-danger"
+              align="center"
+              disabled={!enabled}
+              onClick={event => this.handleBtnClick(event)}
+            >
+              Stop Trading
+            </button>
+          </div>
         </div>
       );
     } else {
-      result = (
-        <div className="col-md-12" align="center">
-          <button type="button" className="btn btn-primary" align="center">
-            Start Trading
-          </button>
+      btn = (
+        <div className="row">
+          <div className="col-md-12" align="center">
+            <button
+              type="button"
+              id="start"
+              className="btn btn-primary"
+              align="center"
+              disabled={!enabled}
+              onClick={event => this.handleBtnClick(event)}
+            >
+              Start Trading
+            </button>
+          </div>
         </div>
       );
     }
-    return <div className="row">{result}</div>;
+    return [btn, msg];
+  }
+
+  handleBtnClick(e) {
+    let action = e.target.id === "start" ? "start" : "stop";
+    try {
+      var _this = this;
+      axios({
+        method: "post",
+        baseURL: sysconfig.EXECUTER_URI,
+        url: "/user/startstop",
+        data: { email: this.props.user.email, action },
+        headers: { "x-auth": this.props.token }
+      })
+        .then(function(response) {
+          if (response.status === 200) {
+            _this.props.selectUser(response.data);
+          }
+        })
+        .catch(err => {
+          _this.setState({
+            msg: `Status: ${err.response.status} Error: ${err.response.data.message}`
+          });
+          alert(`Status: ${err.response.status} Error: ${err.response.data.message}`);
+        });
+    } catch (e) {
+      alert("Error: " + e);
+    }
   }
 
   renderNoValidated(user) {
@@ -128,22 +177,25 @@ class User extends Component {
     let msg = "Waiting load user";
     if (this.props.user && this.props.user.email) {
       msg = "OK";
-      if (this.props.user.monitor.length === 0) msg = "No tokens configured";
+      if (this.props.user.monitor.length === 0) msg = "No Tokens configured";
       if (this.props.user.tk.length < 64 || this.props.user.sk.length < 64)
-        msg = "No API Keys configured";
+        msg = "No Security API Keys configured";
       if (this.props.user.status === "registered") msg = "User email not validated";
       if (this.props.user.validtil < new Date()) msg = "Plan validity expired";
+      // if (msg !== "OK") {
+      //   this.setState({ msg });
+      // }
     }
     return msg;
   }
 
   render() {
-    const verified = this.verifyUser();
+    const verifyMsg = this.verifyUser();
     const user = this.showUser();
     if (this.props.user && this.props.user.status === "registered") {
       return this.renderNoValidated(user);
     }
-    const actions = this.setActions(verified);
+    const actions = this.setActions(verifyMsg === "OK", verifyMsg);
     return (
       <div>
         {user}

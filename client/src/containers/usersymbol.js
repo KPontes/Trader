@@ -2,10 +2,12 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import axios from "axios";
+import ReactTooltip from "react-tooltip";
 
 import sysconfig from "../config";
 import { selectUser } from "../actions/root";
 import SymbolPanel from "./symbolpanel";
+import NumberPanel from "./numberpanel";
 
 class UserSymbol extends Component {
   constructor(props) {
@@ -13,13 +15,14 @@ class UserSymbol extends Component {
     this.handleChangeClick = this.handleChangeClick.bind(this);
     this.getData = this.getData.bind(this);
     this.state = {
-      symbolpanel: "hide"
+      symbolpanel: "hide",
+      numberpanel: "hide"
     };
     var _this = this;
     axios({
       method: "get",
       baseURL: sysconfig.EXECUTER_URI,
-      url: "/getsetting?exchange=binance"
+      url: "/getsetting?exchange=" + this.props.user.exchange
     })
       .then(function(response) {
         if (response.data) {
@@ -32,7 +35,12 @@ class UserSymbol extends Component {
   }
 
   handleChangeClick(e, i) {
-    this.setState({ index: i, symbolpanel: "show" });
+    if (e.target.value === "symbol") {
+      this.setState({ index: i, symbolpanel: "show", numberpanel: "hide" });
+    }
+    if (e.target.value === "number") {
+      this.setState({ index: i, symbolpanel: "hide", numberpanel: "show" });
+    }
   }
 
   btns(element, index) {
@@ -42,6 +50,8 @@ class UserSymbol extends Component {
           type="button"
           className="btn btn-outline-dark btn-sm cursor-pointer ml-2"
           id={element.symbol}
+          value="symbol"
+          disabled={this.props.user.status === "activeOn"}
           onClick={event => this.handleChangeClick(event, index)}
         >
           Symbol
@@ -50,6 +60,8 @@ class UserSymbol extends Component {
           type="button"
           className="btn btn-outline-dark btn-sm cursor-pointer ml-2"
           id={element.symbol}
+          value="number"
+          disabled={this.props.user.status === "activeOn"}
           onClick={event => this.handleChangeClick(event, index)}
         >
           Numbers
@@ -58,6 +70,8 @@ class UserSymbol extends Component {
           type="button"
           className="btn btn-outline-dark btn-sm cursor-pointer ml-2"
           id={element.symbol}
+          value="algorithm"
+          disabled={this.props.user.status === "activeOn"}
           onClick={event => this.handleChangeClick(event, index)}
         >
           Algorithms
@@ -76,12 +90,9 @@ class UserSymbol extends Component {
         listItems.push(
           <div>
             <div className="row bg-light" align="center">
-              <div className="col-md-1">{element.symbol}</div>
-              <div className="col-md-1">{element.strategy}</div>
-              <div className="col-md-2">{element.period}</div>
-              <div className="col-md-2">
-                {element.maxAmount.value} {element.maxAmount.selector}
-              </div>
+              <div className="col-md-2">{element.symbol}</div>
+              <div className="col-md-2">{element.strategy}</div>
+              <div className="col-md-2">{element.mode}</div>
               {btnLine}
             </div>
           </div>
@@ -94,27 +105,40 @@ class UserSymbol extends Component {
 
   getData(val) {
     //receive data from child component
-    this.setState({
-      symbolpanel: val
-    });
+    if (val === "hide-symbol-panel")
+      this.setState({
+        symbolpanel: "hide"
+      });
+    if (val === "hide-number-panel")
+      this.setState({
+        numberpanel: "hide"
+      });
   }
 
   render() {
     const monitor = this.getUserSymbols();
-    let panel =
-      this.state.symbolpanel === "hide" ? (
-        <div />
-      ) : (
-        <SymbolPanel sendData={this.getData} index={this.state.index} />
-      );
+    const settings = this.state.settings;
+    const index = this.state.index;
+    let panel;
+    if (this.state.symbolpanel === "hide" && this.state.numberpanel === "hide") {
+      panel = <div />;
+    }
+    if (this.state.symbolpanel === "show") {
+      panel = <SymbolPanel sendData={this.getData} settings={settings} index={index} />;
+    }
+    if (this.state.numberpanel === "show") {
+      panel = <NumberPanel sendData={this.getData} settings={settings} index={index} />;
+    }
     return (
       <div>
         <div className="row bg-light font-weight-bold" align="center">
-          <div className="col-md-1">Symbol</div>
-          <div className="col-md-1">Strategy</div>
-          <div className="col-md-2">Min interval</div>
-          <div className="col-md-2">Max Amount</div>
-          <div className="col-md-6">Actions</div>
+          <div className="col-md-2">Symbol</div>
+          <div className="col-md-2">Strategy</div>
+          <div className="col-md-2">Mode</div>
+          <div className="col-md-6">
+            <label data-tip="Configure actions allowed with trading stopped">Actions</label>
+          </div>
+          <ReactTooltip place="top" type="info" effect="float" />
         </div>
         <div>{monitor}</div>
         <div>{panel}</div>

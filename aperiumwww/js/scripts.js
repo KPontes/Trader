@@ -25,5 +25,6 @@ $(document).ready(function() {
 $(document).ready(function() {
   $("#includeMenu").load("menu1.html");
   $("#includeFooter").load("footer.html");
+  $("#includePricing").load("pricing1.html");
   $("#includeReactFrame").load("reactapp.html");
 });

@@ -49,19 +49,19 @@ class Account extends Component {
         <span
           className="btn-link cursor-pointer text-white"
           onClick={() =>
-            this.setState({ mxchange: false, mplan: false, mtoken: true, msecure: false })
+            this.setState({ mxchange: false, mplan: false, mtoken: false, msecure: true })
           }
         >
-          Tokens
+          Security
         </span>
         <br />
         <span
           className="btn-link cursor-pointer text-white"
           onClick={() =>
-            this.setState({ mxchange: false, mplan: false, mtoken: false, msecure: true })
+            this.setState({ mxchange: false, mplan: false, mtoken: true, msecure: false })
           }
         >
-          Security
+          Tokens
         </span>
       </div>
     );

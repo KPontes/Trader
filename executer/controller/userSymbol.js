@@ -19,7 +19,7 @@ const defaultConfig = {
   rule_klines: [0.005]
 };
 
-function addSymbol(requestobj) {
+function add(requestobj) {
   return new Promise(async function(resolve, reject) {
     //add both, default configuration or post request symbol
     try {
@@ -27,7 +27,6 @@ function addSymbol(requestobj) {
       if (!oneuser) {
         throw "email not found";
       }
-
       let userSymbols = oneuser.monitor.filter(element => {
         if (element.symbol === requestobj.symbol) {
           return element;
@@ -41,8 +40,8 @@ function addSymbol(requestobj) {
         throw "Invalid symbol or mixed markets";
       }
       let userpair = new UserPair();
+      userpair.symbol = requestobj.symbol.trim();
       if (!requestobj.usedefault) {
-        userpair.symbol = requestobj.symbol.trim();
         userpair.strategy = requestobj.strategy.trim();
         userpair.mode = requestobj.mode;
         userpair.schedule = requestobj.schedule;
@@ -60,7 +59,6 @@ function addSymbol(requestobj) {
           bottomPrice: Number.MAX_SAFE_INTEGER
         };
       }
-
       let oConfig = requestobj.usedefault ? defaultConfig : requestobj;
       let configcalc = {};
       let configrule = {};
@@ -84,38 +82,25 @@ function addSymbol(requestobj) {
   });
 }
 
-function validateSymbol(monitor, symbol, exchange) {
+function del(requestobj) {
   return new Promise(async function(resolve, reject) {
     try {
-      //verify if BTC is in USDT market
-      let btcusdt = monitor.filter(element => {
-        if (element.symbol === "BTCUSDT") {
-          return element;
-        }
-      });
-      //verify if there is use of BTC market
-      let btcmarket = monitor.filter(element => {
-        let market = element.symbol.substring(element.symbol.length - 3);
-        if (market === "BTC") {
-          return element;
-        }
-      });
-      console.log("new", symbol);
-      let newsymbolMkt = symbol.substring(symbol.length - 3);
-      if (btcmarket.length > 0 && btcusdt.length > 0) {
-        return resolve(false);
+      let oneuser = await User.findOne({ email: requestobj.email });
+      if (!oneuser) {
+        throw "email not found";
       }
-      if (newsymbolMkt === "BTC" && btcusdt.length > 0) {
-        return resolve(false);
-      }
-      loader = await LoaderSettings.findOne({ exchange });
-      let ind = loader.symbols.findIndex(doc => doc === symbol);
+      let ind = oneuser.monitor.findIndex(doc => doc.symbol === requestobj.symbol);
       if (ind === -1) {
-        return resolve(false);
+        throw "Symbol not found";
       }
-      resolve(true);
+      if (oneuser.monitor.length <= 1) {
+        throw "Must have at least one token";
+      }
+      oneuser.monitor.splice(ind, 1);
+      await oneuser.save();
+      resolve(oneuser);
     } catch (err) {
-      console.log("Err user changeSymbol: ", err);
+      console.log("Err delSymbol: ", err);
       reject(err);
     }
   });
@@ -152,7 +137,80 @@ function changeSymbol(requestobj) {
   });
 }
 
+function validateSymbol(monitor, symbol, exchange) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      //verify if BTC is in USDT market
+      let btcusdt = monitor.filter(element => {
+        if (element.symbol === "BTCUSDT") {
+          return element;
+        }
+      });
+      //verify if there is use of BTC market
+      let btcmarket = monitor.filter(element => {
+        let market = element.symbol.substring(element.symbol.length - 3);
+        if (market === "BTC") {
+          return element;
+        }
+      });
+      let newsymbolMkt = symbol.substring(symbol.length - 3);
+      if (btcmarket.length > 0 && btcusdt.length > 0) {
+        return resolve(false);
+      }
+      if (newsymbolMkt === "BTC" && btcusdt.length > 0) {
+        return resolve(false);
+      }
+      loader = await LoaderSettings.findOne({ exchange });
+      let ind = loader.symbols.findIndex(doc => doc === symbol);
+      if (ind === -1) {
+        return resolve(false);
+      }
+      resolve(true);
+    } catch (err) {
+      console.log("Err user changeSymbol: ", err);
+      reject(err);
+    }
+  });
+}
+
+function updateNumbers(requestobj) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      let oneuser = await User.findOne({ email: requestobj.email });
+      if (!oneuser) {
+        throw "email not found";
+      }
+      let ind = oneuser.monitor.findIndex(doc => doc.symbol === requestobj.symbol);
+      if (ind === -1) {
+        throw "Symbol not found";
+      }
+      let userpair = oneuser.monitor[ind];
+      if (requestobj.topVariation && requestobj.bottomVariation) {
+        oneuser.monitor[ind].stopLoss = {
+          topVariation: requestobj.topVariation,
+          bottomVariation: requestobj.bottomVariation,
+          topPrice: userpair.stopLoss.topPrice,
+          bottomPrice: userpair.stopLoss.bottomPrice
+        };
+      }
+      if (requestobj.maxValue) {
+        oneuser.monitor[ind].maxAmount = {
+          selector: requestobj.maxSelector,
+          value: requestobj.maxValue
+        };
+      }
+      let resUser = await oneuser.save();
+      resolve(resUser);
+    } catch (err) {
+      console.log("Err updateNumbers: ", err);
+      reject(err);
+    }
+  });
+}
+
 module.exports = {
-  addSymbol: addSymbol,
-  changeSymbol: changeSymbol
+  add: add,
+  del: del,
+  changeSymbol: changeSymbol,
+  updateNumbers: updateNumbers
 };

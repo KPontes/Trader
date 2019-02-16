@@ -17,25 +17,10 @@ class SymbolPanel extends Component {
     let index = this.props.index;
     let symbol = this.props.user.monitor[index].symbol;
     this.state = {
-      showdetail: false,
       oldSymbol: symbol,
       newSymbol: symbol,
       msg: ""
     };
-    var _this = this;
-    axios({
-      method: "get",
-      baseURL: sysconfig.EXECUTER_URI,
-      url: "/getsetting?exchange=" + this.props.user.exchange
-    })
-      .then(function(response) {
-        if (response.data) {
-          _this.setState({ settings: response.data });
-        }
-      })
-      .catch(function(error) {
-        console.log(error);
-      });
   }
 
   handleChangeClick(e, i) {
@@ -103,7 +88,31 @@ class SymbolPanel extends Component {
   }
 
   handleDelClick(e, i) {
-    console.log("DEL Clicked");
+    try {
+      var _this = this;
+      axios({
+        method: "DELETE",
+        baseURL: sysconfig.EXECUTER_URI,
+        url: "/usersymbol/del",
+        data: {
+          email: this.props.user.email,
+          symbol: this.state.newSymbol
+        },
+        headers: { "x-auth": this.props.token }
+      })
+        .then(function(response) {
+          if (response.status === 200) {
+            _this.props.selectUser(response.data);
+            _this.state.msg = "Symbol deleted!";
+          }
+        })
+        .catch(function(error) {
+          console.log(error);
+          alert("Error: " + error.message);
+        });
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
   }
 
   handleOptionChange(changeEvent) {
@@ -114,57 +123,46 @@ class SymbolPanel extends Component {
   }
 
   handleCloseClick(changeEvent) {
-    this.props.sendData("hide"); //send to parent
+    this.props.sendData("hide-symbol-panel"); //send to parent
   }
 
   btns() {
-    return (
-      <div>
-        <div className="col-md-5">
-          <button
-            type="button"
-            className="btn btn-info btn-sm cursor-pointer"
-            id={this.state.newSymbol}
-            onClick={event => this.handleChangeClick(event)}
-          >
-            Change
-          </button>
-          <button
-            type="button"
-            className="btn btn-info btn-sm cursor-pointer ml-2"
-            id={this.state.newSymbol}
-            onClick={event => this.handleAddClick(event)}
-          >
-            Add
-          </button>
-          <button
-            type="button"
-            className="btn btn-info btn-sm cursor-pointer ml-2"
-            id={this.state.newSymbol}
-            onClick={event => this.handleDelClick(event)}
-          >
-            Delete
-          </button>
-          <p className="text-danger"> {this.state.msg}</p>
-        </div>
-        <div className="col-md-1" align="right">
-          <button
-            type="button"
-            className="close"
-            aria-label="Close"
-            onClick={event => this.handleCloseClick(event)}
-          >
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
+    let btns = (
+      <div className="col-md-5">
+        <button
+          type="button"
+          className="btn btn-info btn-sm cursor-pointer"
+          id={this.state.newSymbol}
+          onClick={event => this.handleChangeClick(event)}
+        >
+          Change
+        </button>
+        <button
+          type="button"
+          className="btn btn-info btn-sm cursor-pointer ml-2"
+          id={this.state.newSymbol}
+          onClick={event => this.handleAddClick(event)}
+        >
+          Add
+        </button>
+        <button
+          type="button"
+          className="btn btn-info btn-sm cursor-pointer ml-2"
+          id={this.state.newSymbol}
+          onClick={event => this.handleDelClick(event)}
+        >
+          Delete
+        </button>
+        <p className="text-danger"> {this.state.msg}</p>
       </div>
     );
+    return btns;
   }
 
-  getUserSymbols(index) {
+  getUserSymbols() {
     const opts = () => {
-      if (this.state.settings) {
-        return this.state.settings.symbols.map(element => {
+      if (this.props.settings) {
+        return this.props.settings.symbols.map(element => {
           return (
             <option id={element} value={element}>
               {element}
@@ -182,7 +180,19 @@ class SymbolPanel extends Component {
         <div>
           <div className="row">
             <div className="col-md-3">
-              <label>Select your new Symbol Pair</label>
+              <label>
+                <b>Select your new Symbol Pair</b>
+              </label>
+            </div>
+            <div className="col-md-9" align="right">
+              <button
+                type="button"
+                className="close"
+                aria-label="Close"
+                onClick={event => this.handleCloseClick(event)}
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
             </div>
           </div>
           <div className="row">
@@ -205,13 +215,13 @@ class SymbolPanel extends Component {
   }
 
   render() {
-    let panelSymbol = <div />;
+    let panel = <div />;
     // if (this.props.field === "symbol") {
-    panelSymbol = this.getUserSymbols(this.state.index);
+    panel = this.getUserSymbols();
     //}
     return (
       <div className="presentation-div">
-        <div className="form-group">{panelSymbol}</div>
+        <div className="form-group">{panel}</div>
       </div>
     );
   }

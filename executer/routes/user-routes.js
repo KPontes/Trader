@@ -80,13 +80,25 @@ router.post("/resend", authenticate, async (req, res) => {
   }
 });
 
+router.post("/startstop", authenticate, async (req, res) => {
+  try {
+    var result = await ctruser.play(req.body);
+    res.status(200).send(result);
+  } catch (e) {
+    let returnErr = new Error();
+    returnErr.message = e;
+    res.status(400).send(returnErr);
+  }
+});
+
 router.post("/tradekeys", authenticate, async (req, res) => {
   try {
     var result = ctruser.updateKeys(req.body);
     res.status(200).send(_.omit(result, ["password", "tokens", "validation"]));
   } catch (e) {
-    console.log("Error: ", e);
-    res.status(400).send(e);
+    let returnErr = new Error();
+    returnErr.message = e;
+    res.status(400).send(returnErr);
   }
 });
 
