@@ -1,4 +1,5 @@
 const ctruser = require("../controller/user.js");
+const ctrUserSymbol = require("../controller/userSymbol");
 const ctrexchange = require("../controller/exchange.js");
 const scrypto = require("../utils/simplecrypto.js");
 const { User } = require("../models/user.js");
@@ -6,39 +7,57 @@ const { Trade } = require("../models/trade.js");
 
 ("use strict");
 
-function makeOrder(operation, user, index, currPrice) {
+function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
   return new Promise(async function(resolve, reject) {
     try {
       const userpair = user.monitor[index];
       const exchange = user.exchange;
       const symbol = userpair.symbol;
       const ordertype = "MARKET";
-      const oper = operation.oper;
-      const log = operation.log;
+      const operL = largeOper.oper;
+      const operS = shortOper.oper;
+      const log = shortOper.log;
       let upduser = await updateStopLoss(user, index, currPrice);
       let order = {};
-      if (oper !== "none") {
+      if (operS !== "none") {
         const tk = scrypto.decrypt(user.tk, process.env.SYSPD);
         const sk = scrypto.decrypt(user.sk, process.env.SYSPD);
-        let amount = await ctruser.getBalance(exchange, symbol, tk, sk);
-        if (amount > userpair.maxAmount) amount = userpair.maxAmount;
-        order = await ctrexchange.putOrder(exchange, oper, symbol, ordertype, amount, tk, sk);
-        let doc = await updUserPostOrder(oper, user, index, currPrice);
-        console.log("Trade", oper);
-        let trade = await Trade.insert(
-          user._id,
-          exchange,
-          symbol,
-          ordertype,
-          oper,
+        let accinfo = await ctrexchange.accountInfo(exchange, tk, sk);
+        let amount = await ctrUserSymbol.getTradeAmount(
+          userpair,
+          accinfo,
+          operS,
           currPrice,
-          amount,
-          log
+          btcusdt
         );
+        if (amount !== -1) {
+          order = await ctrexchange.putOrder(exchange, operS, symbol, ordertype, amount, tk, sk);
+          let doc = await updUserPostOrder(operS, user, index, currPrice);
+          console.log("Trade", operS);
+          let trd = await Trade.insert(
+            user._id,
+            exchange,
+            symbol,
+            ordertype,
+            operS,
+            currPrice,
+            amount,
+            log
+          );
+        } else {
+          // if there is no balance on one direction, update direction to none
+          upduser = await User.findById(user._id);
+          if (upduser) {
+            upduser.monitor[index].lastDirection = "none";
+            await upduser.save();
+          }
+        }
       }
       resolve(order);
     } catch (err) {
       console.log("Err makeOrder ", err);
+      //TypeError [ERR_INVALID_CHAR]: Invalid character in header content ["X-MBX-APIKEY"]
+      //if X-MBX-APIKEY in Err => set user activeOff
       reject(err);
     }
   });
@@ -47,9 +66,9 @@ function makeOrder(operation, user, index, currPrice) {
 function updateStopLoss(user, index, currPrice) {
   return new Promise(async function(resolve, reject) {
     try {
-      //update stoploss topPrice
       const userpair = user.monitor[index];
       let upduser = await User.findById(user._id);
+      //update stoploss topPrice
       if (
         currPrice > userpair.stopLoss.topPrice &&
         userpair.lastDirection.toLowerCase() === "buy"
@@ -64,6 +83,7 @@ function updateStopLoss(user, index, currPrice) {
           await upduser.save();
         }
       }
+      //update stoploss bottomPrice
       if (
         currPrice < userpair.stopLoss.bottomPrice &&
         userpair.lastDirection.toLowerCase() === "sell"
@@ -120,19 +140,31 @@ function updUserPostOrder(oper, user, index, currPrice) {
   });
 }
 
-function defineOperation(user, userpair, summary, currPrice, tradeLog) {
+function defineOperationLarge(user, userpair, summary) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      let srules = summaryRules(userpair, summary);
+      resolve({ oper: srules.oper, rule: srules.rule });
+    } catch (err) {
+      console.log("Err stOne defineOperationLarge: ", err);
+      reject(err);
+    }
+  });
+}
+
+function defineOperationShort(user, userpair, summary, currPrice, largeOper, tradeLog) {
   return new Promise(async function(resolve, reject) {
     try {
       let srules = summaryRules(userpair, summary);
       tradeLog.summaryRules = Object.assign({}, srules);
-      let vrules = variationRules(srules, userpair, currPrice);
+      let vrules = variationRules(srules, userpair, currPrice, largeOper);
       tradeLog.variationRules = Object.assign({}, vrules);
       let drules = directionRules(vrules, userpair);
       tradeLog.directionRules = Object.assign({}, drules);
-      console.log("defineOperation", tradeLog);
+      console.log("defineOperationShort", tradeLog);
       resolve({ oper: drules.oper, rule: drules.rule, log: tradeLog });
     } catch (err) {
-      console.log("Err stOne defineOperation: ", err);
+      console.log("Err stOne defineOperationShort: ", err);
       reject(err);
     }
   });
@@ -165,36 +197,42 @@ function summaryRules(userpair, summary) {
   }
 }
 
-function variationRules(previousResult, userpair, currPrice) {
+function variationRules(previousResult, userpair, currPrice, largeOper) {
   try {
     let oResult = Object.assign({}, previousResult); //so I dont modify the input parameter obj
     let inputOper = oResult.oper;
     //treat stop loss variation to last top price
     let topVariation = (currPrice - userpair.stopLoss.topPrice) / userpair.stopLoss.topPrice;
     if (inputOper === "sell" && currPrice < userpair.stopLoss.topPrice) {
-      if (
-        Math.abs(topVariation) > userpair.stopLoss.topVariation ||
-        currPrice < userpair.lastPrice
-      ) {
+      if (Math.abs(topVariation) > userpair.stopLoss.topVariation) {
         oResult.oper = inputOper;
         oResult.rule = "stop loss";
       } else {
-        oResult.oper = "none";
-        oResult.rule = "price variation smaller than stop loss";
+        //on bearish market, sell fast
+        if (currPrice < userpair.lastPrice && largeOper === inputOper) {
+          oResult.oper = inputOper;
+          oResult.rule = "stop loss";
+        } else {
+          oResult.oper = "none";
+          oResult.rule = "price variation smaller than stop loss";
+        }
       }
     }
-    //treat start gain variation to last bottom price. Delayed version to buy
     let bottomVariation =
       (currPrice - userpair.stopLoss.bottomPrice) / userpair.stopLoss.bottomPrice;
     if (inputOper === "buy" && currPrice > userpair.stopLoss.bottomPrice) {
       if (Math.abs(bottomVariation) > userpair.stopLoss.bottomVariation) {
-        //excluded condition (or currPrice > userpair.lastPrice).
-        //Now use stoploss small, startgain large
         oResult.oper = inputOper;
         oResult.rule = "start gain";
       } else {
-        oResult.oper = "none";
-        oResult.rule = "price variation smaller than start gain";
+        //on bullish market, buy fast
+        if (currPrice > userpair.lastPrice && largeOper === inputOper) {
+          oResult.oper = inputOper;
+          oResult.rule = "start gain";
+        } else {
+          oResult.oper = "none";
+          oResult.rule = "price variation smaller than start gain";
+        }
       }
     }
     // //treat variation to last operation price. Overlaps previous rules
@@ -213,7 +251,7 @@ function directionRules(previousResult, userpair) {
   try {
     let oResult = Object.assign({}, previousResult); //so I dont modify the input parameter obj
     //treat direction
-    if (oResult.oper === userpair.lastDirection.toLowerCase()) {
+    if (oResult.oper !== "none" && oResult.oper === userpair.lastDirection.toLowerCase()) {
       oResult.oper = "none";
       oResult.rule = "same direction as previous operation";
     }
@@ -224,6 +262,7 @@ function directionRules(previousResult, userpair) {
 }
 
 module.exports = {
-  defineOperation: defineOperation,
+  defineOperationShort: defineOperationShort,
+  defineOperationLarge: defineOperationLarge,
   makeOrder: makeOrder
 };

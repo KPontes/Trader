@@ -208,9 +208,87 @@ function updateNumbers(requestobj) {
   });
 }
 
+function getTradeAmount(userpair, accinfo, oper, currPrice, btcusdt) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      const USD_Min_Trade = 30;
+      const symbolRound = { BTC: 4, XRP: 0, ETH: 2 };
+
+      function symbolBalance(symbol) {
+        return accinfo.balances.filter(element => {
+          if (element.asset === symbol.substring(0, element.asset.length)) {
+            return element;
+          }
+        });
+      }
+
+      let balance;
+      let tokenToTrade;
+      let symbolAmount;
+      let usdTradeValue;
+      let market = userpair.symbol.slice(-4) === "USDT" ? "USDT" : "BTC";
+      if (oper === "buy") {
+        let len = userpair.symbol.length;
+        tokenToTrade = userpair.symbol.substr(0, len - market.length);
+        //when buying a token, check availability of market (USDT or BTC) balance
+        balance = symbolBalance(market);
+        if (userpair.maxAmount.selector === "PERCENT") {
+          //uses a maximum of 90% or the specified maxamount
+          let percent = userpair.maxAmount.value > 90 ? 0.9 : userpair.maxAmount.value / 100;
+          symbolAmount = Number(balance[0].free) * percent;
+          if (market === "USDT") {
+            usdTradeValue = symbolAmount;
+            //How many tokens = available usd amount div token usd price
+            symbolAmount = symbolAmount / currPrice;
+          } else {
+            usdTradeValue = symbolAmount * btcusdt;
+            //How many tokens = available btc amount div token btc price
+            symbolAmount = symbolAmount / currPrice;
+          }
+        }
+        if (userpair.maxAmount.selector === "USD") {
+          let usdMax = userpair.maxAmount.value;
+          symbolAmount = Number(balance[0].free) * 0.9;
+          if (market === "USDT") {
+            let usdBalance = symbolAmount;
+            symbolAmount = usdBalance > usdMax ? usdMax : usdBalance; //in USDT
+            usdTradeValue = symbolAmount;
+          } else {
+            //get balance value available in BTC, but respecting maxValue defined inUSDT
+            let usdBalance = symbolAmount * btcusdt;
+            symbolAmount = usdBalance > usdMax ? usdMax / btcusdt : usdBalance / btcusdt; //in BTC
+            usdTradeValue = symbolAmount * btcusdt;
+          }
+        }
+      } else {
+        //sell is from a token to USDT or BTC market. On sell uses total availability
+        balance = symbolBalance(userpair.symbol);
+        tokenToTrade = balance[0].asset;
+        symbolAmount = Number(balance[0].free) * 0.9;
+        if (market === "USDT") {
+          usdTradeValue = symbolAmount * currPrice;
+        } else {
+          usdTradeValue = symbolAmount * currPrice * btcusdt;
+        }
+      }
+      let toRound = symbolRound[tokenToTrade] !== undefined ? symbolRound[tokenToTrade] : 1;
+      symbolAmount = _.round(symbolAmount, toRound);
+      if (usdTradeValue < USD_Min_Trade) symbolAmount = -1;
+      console.log("**tokenToTrade", tokenToTrade);
+      console.log("**symbolAmount", symbolAmount);
+      console.log("**usdTradeValue", usdTradeValue);
+      resolve(symbolAmount);
+    } catch (err) {
+      console.log("Err user getTradeAmount: ");
+      reject(err);
+    }
+  });
+}
+
 module.exports = {
   add: add,
   del: del,
   changeSymbol: changeSymbol,
-  updateNumbers: updateNumbers
+  updateNumbers: updateNumbers,
+  getTradeAmount: getTradeAmount
 };

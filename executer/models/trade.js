@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // this is for workaround on the lack of atomicity of multidocs transactions on Mongodb
 var TradeSchema = new mongoose.Schema(
   {
-    userKey: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true
     },
@@ -21,6 +21,7 @@ var TradeSchema = new mongoose.Schema(
     },
     orderType: { type: String, enum: ["MARKET", "LIMIT"], required: true },
     price: { type: Number, required: true },
+    quantity: { type: Number, required: true },
     side: { type: String, enum: ["BUY", "SELL"], required: true },
     log: mongoose.Schema.Types.Mixed
   },
@@ -31,7 +32,7 @@ var TradeSchema = new mongoose.Schema(
 
 // statics, class method
 TradeSchema.statics.insert = async function(
-  userKey,
+  userId,
   exchange,
   symbol,
   orderType,
@@ -43,7 +44,7 @@ TradeSchema.statics.insert = async function(
   return new Promise(async function(resolve, reject) {
     try {
       let trade = new Trade();
-      trade.userKey = userKey;
+      trade.userId = userId;
       trade.exchange = exchange;
       trade.symbol = symbol;
       trade.orderType = orderType.toUpperCase();

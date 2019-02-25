@@ -9,7 +9,7 @@ const Menu = props => {
         <Link className="text-secondary mr-3" to="/">
           Account
         </Link>
-        <Link className="text-secondary mr-3" to="/plans">
+        <Link className="text-secondary mr-3" to="/trades">
           Performance Track
         </Link>
         <Link className="text-secondary mr-3" to={"/signout"}>

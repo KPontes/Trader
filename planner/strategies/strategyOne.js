@@ -44,6 +44,7 @@ StrategyOne.prototype.findResult = function(exchange, symbol, period) {
           let cfgCalcDb = doc.configcalc[key];
           if (cfgCalcDb.length !== cfgCalcInput.length) match = false;
           cfgCalcInput.map(item => {
+            //if thete is an input item without match on db
             if (_.indexOf(cfgCalcDb, item) === -1) {
               match = false;
             }
@@ -65,15 +66,15 @@ StrategyOne.prototype.findResult = function(exchange, symbol, period) {
         }
       }
       if (!match) {
-        return resolve({ result: false, action: "insert" });
+        return resolve({ stgdoc: false, action: "insert" });
       }
       if (!(stg.lastresult && stg.lastsummary)) {
-        return resolve({ result: stg, action: "update" });
+        return resolve({ stgdoc: stg, action: "update" });
       }
       if (moment().subtract(1, "minutes") > stg.updatedAt) {
-        return resolve({ result: stg, action: "update" });
+        return resolve({ stgdoc: stg, action: "update" });
       }
-      resolve({ result: stg, action: "none" });
+      resolve({ stgdoc: stg, action: "none" });
     } catch (err) {
       console.log("Err generate: ", err);
       reject(err);
@@ -101,7 +102,7 @@ StrategyOne.prototype.createConfig = function(exchange, pair, period) {
         newStrategy[newkey] = _this.config.rule[key];
       });
       let stg = await strategy.saveConfig(newStrategy);
-      resolve({ result: stg, action: "update" });
+      resolve({ stgdoc: stg, action: "update" });
     } catch (err) {
       console.log("Err update StrategyOne: ", err);
       reject(err);

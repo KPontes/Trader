@@ -11,6 +11,7 @@ const { LoaderSettings } = require("./models/loaderSettings.js");
 var { authenticate } = require("./middleware/authenticate.js");
 var userRoutes = require("./routes/user-routes.js");
 var userSymbolRoutes = require("./routes/userSymbol-routes.js");
+var tradeRoutes = require("./routes/trade-routes.js");
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use(function(req, res, next) {
 });
 app.use("/user", userRoutes);
 app.use("/usersymbol", userSymbolRoutes);
+app.use("/trade", tradeRoutes);
 
 app.get("/express", (req, res) => {
   console.log("executer welcome message");

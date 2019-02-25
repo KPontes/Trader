@@ -9,24 +9,6 @@ const { User, UserPair } = require("../models/user.js");
 
 ("use strict");
 
-function getBalance(exchange, symbol, tk, sk) {
-  return new Promise(async function(resolve, reject) {
-    try {
-      //recebe resultado e filtra pelo symbol
-      let accinfo = await ctrexchange.accountInfo(exchange, tk, sk);
-      let amount = accinfo.balances.filter(element => {
-        if (element.asset === symbol.substring(0, element.asset.length)) {
-          return element;
-        }
-      });
-      resolve(Number(amount[0].free));
-    } catch (err) {
-      console.log("Err user getBalance: ");
-      reject(err);
-    }
-  });
-}
-
 function add(requestobj) {
   return new Promise(async function(resolve, reject) {
     try {
@@ -118,6 +100,5 @@ module.exports = {
   play: play,
   add: add,
   updateKeys: updateKeys,
-  getBalance: getBalance,
   createValidation: createValidation
 };

@@ -1,6 +1,7 @@
 #!/bin/bash
 # restart webserver image
 cd ~/Projects/chart-trader/aperiumwww
+cp nginx-nocache-dev.conf nginx-nocache.conf
 cp reactapp.dev.html reactapp.html
 docker image build -t aperium-web .
 docker container rm webserver -f

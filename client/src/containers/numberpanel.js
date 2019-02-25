@@ -108,7 +108,7 @@ class NumberPanel extends Component {
         <div className="col-md-2">High Interval</div>
         <div className="col-md-2">Trade Schedule %</div>
         <div className="col-md-2">
-          <label data-tip="Maximum allowed trade for this token, <br/> as % of your total account, BTC or USD">
+          <label data-tip="Maximum allowed trade for this token, <br/> as % of your total account or USD">
             Max Amount
           </label>
         </div>
@@ -201,6 +201,7 @@ class NumberPanel extends Component {
               id="maxBtc"
               type="radio"
               value="BTC"
+              disabled
               checked={this.state.maxSelector === "BTC"}
               onChange={this.handleOptionChange}
             />

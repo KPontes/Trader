@@ -5,6 +5,7 @@ const scrypto = require("../utils/simplecrypto.js");
 const _ = require("lodash");
 const bcrypt = require("bcryptjs");
 
+const maxPrice = 999999999999;
 const OrderDirection = Object.freeze({
   buy: "buy",
   sell: "sell",
@@ -12,7 +13,6 @@ const OrderDirection = Object.freeze({
 });
 
 const AmountSelector = Object.freeze({
-  BTC: "BTC",
   USD: "USD",
   PERCENT: "PERCENT"
 });
@@ -81,7 +81,7 @@ var UserPairSchema = new mongoose.Schema(
         topVariation: 0.005,
         topPrice: 0.0001,
         bottomVariation: 0.01,
-        bottomPrice: Number.MAX_SAFE_INTEGER
+        bottomPrice: maxPrice //Number.MAX_SAFE_INTEGER
       }
     }
   },

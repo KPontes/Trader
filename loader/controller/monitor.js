@@ -35,7 +35,7 @@ Monitor.prototype.pooling = async function() {
         console.log(result);
       } catch (err) {
         console.log("Err loader pooling");
-        console.log("err.response", err.response);
+        console.log("err", err);
         if (err.response && err.response.status === 429) {
           console.log(`${err.response.status} Request rate limit`);
           this.interval = 120000;
@@ -61,7 +61,7 @@ Monitor.prototype.executeLoader = function() {
       for (let pair of loaderset.symbols) {
         for (let timeInterval of loaderset.periods) {
           let data = await exchange.getKLines(loaderset.exchange, pair, timeInterval);
-          if (data.length < 499) throw { code: 300, msg: "no data" };
+          if (data.length < 200) throw { code: 300, msg: "no data" };
           if (data.code) {
             console.log("Err executeLoader", data.message); //returned an error object
             throw data.message;
