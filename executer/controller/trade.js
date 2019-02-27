@@ -126,7 +126,9 @@ exports.list = function(reqobj) {
         userId: user._id,
         symbol,
         createdAt: { $gte: startDate }
-      });
+      })
+        .sort({ createdAt: 1 })
+        .exec();
       resolve(tradeList);
     } catch (err) {
       console.log("Err trade list ", err);

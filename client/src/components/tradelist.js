@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import _ from "lodash";
+import moment from "moment";
 
 class TradeList extends Component {
   constructor(props) {
@@ -35,6 +36,7 @@ class TradeList extends Component {
           <div className="col-md-2"> {this.state.market}</div>
           <div className="col-md-1"> Diff</div>
           <div className="col-md-1"> %</div>
+          <div className="col-md-2"> Date</div>
         </div>
       </div>
     );
@@ -86,6 +88,7 @@ class TradeList extends Component {
             <div className="col-md-1">
               <label className={color}>{_.round(percent, 2)}</label>
             </div>
+            <div className="col-md-2">{moment(element.createdAt).format("YYYY-MM-DD hh:mm")}</div>
           </div>
         </div>
       );

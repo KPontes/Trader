@@ -24,6 +24,7 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
         const sk = scrypto.decrypt(user.sk, process.env.SYSPD);
         let accinfo = await ctrexchange.accountInfo(exchange, tk, sk);
         let amount = await ctrUserSymbol.getTradeAmount(
+          user.role,
           userpair,
           accinfo,
           operS,
@@ -31,7 +32,9 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
           btcusdt
         );
         if (amount !== -1) {
-          order = await ctrexchange.putOrder(exchange, operS, symbol, ordertype, amount, tk, sk);
+          if (user.role !== "tracker") {
+            order = await ctrexchange.putOrder(exchange, operS, symbol, ordertype, amount, tk, sk);
+          }
           let doc = await updUserPostOrder(operS, user, index, currPrice);
           console.log("Trade", operS);
           let trd = await Trade.insert(

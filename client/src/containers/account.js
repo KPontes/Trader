@@ -18,7 +18,8 @@ class Account extends Component {
       mxchange: false,
       mplan: false,
       mtoken: false,
-      msecure: false
+      msecure: false,
+      mbal: false
     };
   }
 
@@ -31,7 +32,13 @@ class Account extends Component {
         <span
           className="btn-link cursor-pointer text-white"
           onClick={() =>
-            this.setState({ mxchange: true, mplan: false, mtoken: false, msecure: false })
+            this.setState({
+              mxchange: true,
+              mplan: false,
+              mtoken: false,
+              msecure: false,
+              mbal: false
+            })
           }
         >
           Exchange
@@ -40,7 +47,13 @@ class Account extends Component {
         <span
           className="btn-link cursor-pointer text-white"
           onClick={() =>
-            this.setState({ mxchange: false, mplan: true, mtoken: false, msecure: false })
+            this.setState({
+              mxchange: false,
+              mplan: true,
+              mtoken: false,
+              msecure: false,
+              mbal: false
+            })
           }
         >
           Plan
@@ -49,7 +62,13 @@ class Account extends Component {
         <span
           className="btn-link cursor-pointer text-white"
           onClick={() =>
-            this.setState({ mxchange: false, mplan: false, mtoken: false, msecure: true })
+            this.setState({
+              mxchange: false,
+              mplan: false,
+              mtoken: false,
+              msecure: true,
+              mbal: false
+            })
           }
         >
           Security
@@ -58,10 +77,31 @@ class Account extends Component {
         <span
           className="btn-link cursor-pointer text-white"
           onClick={() =>
-            this.setState({ mxchange: false, mplan: false, mtoken: true, msecure: false })
+            this.setState({
+              mxchange: false,
+              mplan: false,
+              mtoken: true,
+              msecure: false,
+              mbal: false
+            })
           }
         >
           Tokens
+        </span>
+        <br />
+        <span
+          className="btn-link cursor-pointer text-white"
+          onClick={() =>
+            this.setState({
+              mxchange: false,
+              mplan: false,
+              mtoken: false,
+              msecure: false,
+              mbal: true
+            })
+          }
+        >
+          Balance
         </span>
       </div>
     );

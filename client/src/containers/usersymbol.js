@@ -8,6 +8,7 @@ import sysconfig from "../config";
 import { selectUser } from "../actions/root";
 import SymbolPanel from "./symbolpanel";
 import NumberPanel from "./numberpanel";
+import AlgoPanel from "./algopanel";
 
 class UserSymbol extends Component {
   constructor(props) {
@@ -16,7 +17,8 @@ class UserSymbol extends Component {
     this.getData = this.getData.bind(this);
     this.state = {
       symbolpanel: "hide",
-      numberpanel: "hide"
+      numberpanel: "hide",
+      algopanel: "hide"
     };
     var _this = this;
     axios({
@@ -36,10 +38,13 @@ class UserSymbol extends Component {
 
   handleChangeClick(e, i) {
     if (e.target.value === "symbol") {
-      this.setState({ index: i, symbolpanel: "show", numberpanel: "hide" });
+      this.setState({ index: i, symbolpanel: "show", numberpanel: "hide", algopanel: "hide" });
     }
     if (e.target.value === "number") {
-      this.setState({ index: i, symbolpanel: "hide", numberpanel: "show" });
+      this.setState({ index: i, symbolpanel: "hide", numberpanel: "show", algopanel: "hide" });
+    }
+    if (e.target.value === "algo") {
+      this.setState({ index: i, symbolpanel: "hide", numberpanel: "hide", algopanel: "show" });
     }
   }
 
@@ -70,7 +75,7 @@ class UserSymbol extends Component {
           type="button"
           className="btn btn-outline-dark btn-sm cursor-pointer ml-2"
           id={element.symbol}
-          value="algorithm"
+          value="algo"
           disabled={this.props.user.status === "activeOn"}
           onClick={event => this.handleChangeClick(event, index)}
         >
@@ -113,6 +118,10 @@ class UserSymbol extends Component {
       this.setState({
         numberpanel: "hide"
       });
+    if (val === "hide-algo-panel")
+      this.setState({
+        algopanel: "hide"
+      });
   }
 
   render() {
@@ -120,7 +129,11 @@ class UserSymbol extends Component {
     const settings = this.state.settings;
     const index = this.state.index;
     let panel;
-    if (this.state.symbolpanel === "hide" && this.state.numberpanel === "hide") {
+    if (
+      this.state.symbolpanel === "hide" &&
+      this.state.numberpanel === "hide" &&
+      this.state.algopanel === "hide"
+    ) {
       panel = <div />;
     }
     if (this.state.symbolpanel === "show") {
@@ -128,6 +141,9 @@ class UserSymbol extends Component {
     }
     if (this.state.numberpanel === "show") {
       panel = <NumberPanel sendData={this.getData} settings={settings} index={index} />;
+    }
+    if (this.state.algopanel === "show") {
+      panel = <AlgoPanel sendData={this.getData} settings={settings} index={index} />;
     }
     return (
       <div>

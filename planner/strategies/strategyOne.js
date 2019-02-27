@@ -230,7 +230,7 @@ StrategyOne.prototype.processBBands = function(exchange, pair, period) {
       if (!searchData) {
         throw "Err missing iloader BBands docs";
       }
-      const result = await bbands.applyBusinessRules(searchData, _this.config.rule.bbands[1]);
+      const result = await bbands.applyBusinessRules(searchData, _this.config.rule.bbands[0]);
       resolve(result);
     } catch (err) {
       console.log(`Err ${strategyName} processBBands:`, err);

@@ -15,13 +15,15 @@ class TradeReport extends Component {
     this.handleBtnClick = this.handleBtnClick.bind(this);
     this.handleOptionChange = this.handleOptionChange.bind(this);
     this.handleDateChange = this.handleDateChange.bind(this);
+    this.onInputChange = this.onInputChange.bind(this);
     let startDate = new Date(this.props.user.createdAt);
     //startDate = startDate.toLocaleDateString("en-US");
     let symbol = this.props.user.monitor[0].symbol;
     this.state = {
       trades: [],
       startDate,
-      symbol
+      symbol,
+      perPage: 50
     };
   }
 
@@ -62,6 +64,11 @@ class TradeReport extends Component {
                 <b>Start Date</b>
               </label>
             </div>
+            <div className="col-md-2">
+              <label>
+                <b>Items per Page</b>
+              </label>
+            </div>
           </div>
           <div className="row">
             <div className="col-md-3">
@@ -80,6 +87,15 @@ class TradeReport extends Component {
                 selected={this.state.startDate}
                 value={this.state.startDate}
                 onChange={this.handleDateChange}
+              />
+            </div>
+            <div className="col-md-3">
+              <input
+                className="form-control"
+                id="perPage"
+                placeholder="number of rows"
+                value={this.state.perPage}
+                onChange={this.onInputChange}
               />
             </div>
             {btnLine}
@@ -132,7 +148,6 @@ class TradeReport extends Component {
       })
         .then(function(response) {
           if (response.data) {
-            console.log("**RESPONSE", response.data);
             _this.setState({ trades: response.data });
           }
         })
@@ -142,6 +157,19 @@ class TradeReport extends Component {
     } catch (e) {
       console.log(e);
     }
+  }
+
+  render() {
+    let role = this.props.user ? this.props.user.role : false;
+    let limit = this.state.perPage;
+    let filter = this.showFilters();
+    return (
+      <div className="container">
+        <Menu logged={role} />
+        <div className="form-group">{filter}</div>
+        <TradeList trades={this.state.trades.slice(-limit)} />
+      </div>
+    );
   }
 
   handleOptionChange(changeEvent) {
@@ -159,16 +187,10 @@ class TradeReport extends Component {
     });
   }
 
-  render() {
-    let role = this.props.user ? this.props.user.role : false;
-    let filter = this.showFilters();
-    return (
-      <div className="container">
-        <Menu logged={role} />
-        <div className="form-group">{filter}</div>
-        <TradeList trades={this.state.trades} />
-      </div>
-    );
+  onInputChange(event) {
+    this.setState({
+      [event.target.id]: event.target.value.trim()
+    });
   }
 }
 

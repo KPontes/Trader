@@ -26,6 +26,7 @@ function getData(exchange, symbol, period) {
 function applyBusinessRules(bbands, recent) {
   return new Promise(async function(resolve, reject) {
     try {
+      console.log("**BBands Rules Recent", recent);
       const countOverBought = bbands
         .slice(-recent)
         .map(function(element) {

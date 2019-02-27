@@ -10,7 +10,10 @@ const Menu = props => {
           Account
         </Link>
         <Link className="text-secondary mr-3" to="/trades">
-          Performance Track
+          Trades
+        </Link>
+        <Link className="text-secondary mr-3" to={"/"}>
+          Performance
         </Link>
         <Link className="text-secondary mr-3" to={"/signout"}>
           Sign-out
@@ -26,6 +29,9 @@ const Menu = props => {
         </Link>
         <Link className="text-secondary mr-3" to={"/signup"}>
           Register
+        </Link>
+        <Link className="text-secondary mr-3" to={"/"}>
+          Performance
         </Link>
       </div>
     );

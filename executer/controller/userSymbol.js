@@ -208,7 +208,7 @@ function updateNumbers(requestobj) {
   });
 }
 
-function getTradeAmount(userpair, accinfo, oper, currPrice, btcusdt) {
+function getTradeAmount(role, userpair, accinfo, oper, currPrice, btcusdt) {
   return new Promise(async function(resolve, reject) {
     try {
       const USD_Min_Trade = 30;
@@ -220,6 +220,11 @@ function getTradeAmount(userpair, accinfo, oper, currPrice, btcusdt) {
             return element;
           }
         });
+      }
+
+      if (role === "tracker") {
+        //arbitrary value, as does not matter
+        return resolve(5);
       }
 
       let balance;

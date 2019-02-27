@@ -108,6 +108,7 @@ var UserSchema = new mongoose.Schema(
     },
     role: {
       type: String,
+      enum: ["user", "admin", "tracker"],
       required: true,
       default: "user"
     },
@@ -149,6 +150,10 @@ var UserSchema = new mongoose.Schema(
     comercial: {
       type: mongoose.Schema.Types.Mixed,
       default: { plan: "FREE", priceUSD: 0, payInterval: 0, tradesLimit: 90 }
+    },
+    initBalance: {
+      type: mongoose.Schema.Types.Mixed,
+      default: { USD: 0, BTC: 0 }
     },
     validation: { type: String, default: "" },
     validtil: {
