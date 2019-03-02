@@ -1,5 +1,6 @@
 const intervalObj = require("interval-promise");
 const moment = require("moment");
+const axios = require("axios");
 
 const { ILoader } = require("../models/indicatorLoader.js");
 const { Indicator } = require("../models/indicator.js");
@@ -54,22 +55,34 @@ Monitor.prototype.executeLoader = function() {
     try {
       await Signalizer.upsert("status", "loading");
       const xchange = "binance";
-      const loaderset = await LoaderSettings.findOne({ exchange: xchange });
-      const priceList = await exchange.symbolPrice(loaderset.exchange);
-      await Prices.saveMany(xchange, loaderset.symbols, priceList);
-      let generated;
-      for (let pair of loaderset.symbols) {
-        for (let timeInterval of loaderset.periods) {
-          let data = await exchange.getKLines(loaderset.exchange, pair, timeInterval);
+      const setting = await LoaderSettings.findOne({ exchange: xchange });
+      let priceList;
+      for (let pair of setting.symbols) {
+        //prices as close as possible to executer for that symbol
+        priceList = await exchange.symbolPrice(setting.exchange);
+        let shortList = priceList.filter(element => {
+          return setting.symbols.indexOf(element.symbol) !== -1;
+        });
+        for (let timeInterval of setting.periods) {
+          let data = await exchange.getKLines(setting.exchange, pair, timeInterval);
           if (data.length < 200) throw { code: 300, msg: "no data" };
           if (data.code) {
             console.log("Err executeLoader", data.message); //returned an error object
             throw data.message;
           }
-          generated = await _this.generateIndicators(loaderset.exchange, pair, data, timeInterval);
-          console.log(generated);
+          let generated = await _this.generateIndicators(
+            setting.exchange,
+            pair,
+            data,
+            timeInterval
+          );
         }
+        //To speed up, do not wait return, just fires run Executer for every symbol
+        //Any issue must be verified at Executer service as do not affect Loader service
+        let executed = _this.runExecuter(setting.exchange, shortList, pair);
+        console.log(`runExecuter: ${pair} ${moment().format("YYYYMMDD:HHmmss")}`);
       }
+      await Prices.saveMany(xchange, setting.symbols, priceList);
       await Signalizer.upsert("status", "ready");
       resolve("OK executeLoader, " + moment().format("YYYYMMDD:HHmmss"));
     } catch (err) {
@@ -81,6 +94,25 @@ Monitor.prototype.executeLoader = function() {
       }
       reject(err);
     }
+  });
+};
+
+Monitor.prototype.runExecuter = function(exchange, priceList, symbol) {
+  return new Promise(function(resolve, reject) {
+    axios({
+      method: "POST",
+      baseURL: process.env["EXECUTER_URL"],
+      url: "/admin/execute",
+      data: { exchange, priceList, symbol }
+    })
+      .then(function(response) {
+        if (response.status === 200) {
+          resolve(response.data);
+        }
+      })
+      .catch(error => {
+        reject("runExecuter Err: " + error.response);
+      });
   });
 };
 

@@ -9,7 +9,7 @@ var _this = this;
 
 const EXCHANGE_URL = "https://api.binance.com";
 
-exports.putOrder = function(oper, pair, type, quantity, tk, sk) {
+exports.putOrder = function(oper, pair, type, quantity, mode, tk, sk) {
   return new Promise(async function(resolve, reject) {
     let serverTime = await _this.serverTime();
     let orderObj = {
@@ -33,12 +33,13 @@ exports.putOrder = function(oper, pair, type, quantity, tk, sk) {
       .update(query)
       .digest("hex"); // set the HMAC hash header
     query = query + "&signature=" + signature;
+    let queryMode = mode === "real" ? "" : "/test";
 
     var axiosObj = {
       headers: { "X-MBX-APIKEY": tk },
       method: "post",
       baseURL: EXCHANGE_URL,
-      url: `/api/v3/order/test?${query}`
+      url: `/api/v3/order${queryMode}?${query}`
     };
 
     axios(axiosObj)

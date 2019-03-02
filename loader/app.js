@@ -33,6 +33,7 @@ var monitor = new Monitor(60000);
 app.post("/loader", async (req, res) => {
   try {
     monitor.pooling();
+    console.log("Started Loader Pooling");
     //var result = await monitor.executeLoader();
     res.status(200).send("OK started loader monitor");
   } catch (e) {

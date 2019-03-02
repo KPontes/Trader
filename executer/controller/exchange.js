@@ -5,11 +5,11 @@ const binance = require("./binance");
 var _this = this;
 //binance set as default template
 //for other exchaneges will need to Normalize results
-exports.putOrder = function(exchange, oper, symbol, type, amount, tk, sk) {
+exports.putOrder = function(exchange, oper, symbol, type, amount, mode, tk, sk) {
   return new Promise(async function(resolve, reject) {
     try {
       if (exchange === "binance") {
-        var data = await binance.putOrder(oper, symbol, type, amount, tk, sk);
+        var data = await binance.putOrder(oper, symbol, type, amount, mode, tk, sk);
       }
       resolve(data);
     } catch (err) {

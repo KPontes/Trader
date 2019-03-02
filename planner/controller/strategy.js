@@ -74,23 +74,49 @@ function validateConfig(oConfig, period) {
   });
 }
 
-function saveResultById(id, result, summary) {
+function saveResultById(id, result, summary, retry) {
   return new Promise(async function(resolve, reject) {
-    try {
-      const stg = await Strategy.findById(id);
-      if (!stg) {
-        throw "Not configured strategy" + name;
+    var trySave = async function(attempts) {
+      try {
+        const stg = await Strategy.findById(id);
+        if (!stg) {
+          throw "Not configured strategy" + name;
+        }
+        stg.lastresult = result;
+        stg.lastsummary = summary;
+        await stg.save();
+        resolve(stg);
+      } catch (e) {
+        if (attempts == 0) {
+          reject(e);
+        } else {
+          setTimeout(async function() {
+            await trySave(attempts - 1);
+          }, 1000);
+        }
       }
-      stg.lastresult = result;
-      stg.lastsummary = summary;
-      await stg.save();
-      resolve(stg);
-    } catch (err) {
-      console.log("Err saveResult: ", err);
-      reject(err);
-    }
+    };
+    await trySave(retry);
   });
 }
+
+// function saveResultById(id, result, summary) {
+//   return new Promise(async function(resolve, reject) {
+//     try {
+//       const stg = await Strategy.findById(id);
+//       if (!stg) {
+//         throw "Not configured strategy" + name;
+//       }
+//       stg.lastresult = result;
+//       stg.lastsummary = summary;
+//       await stg.save();
+//       resolve(stg);
+//     } catch (err) {
+//       console.log("Err saveResultById: ", err);
+//       reject(err);
+//     }
+//   });
+// }
 
 function saveResult(name, exchange, symbol, period, config, result, summary) {
   return new Promise(async function(resolve, reject) {

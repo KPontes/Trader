@@ -1,6 +1,7 @@
 const moment = require("moment");
 const _ = require("lodash");
 const axios = require("axios");
+const axiosRetry = require("axios-retry");
 
 const stgOne = require("../strategies/strategyOne.js");
 const { Trade } = require("../models/trade.js");
@@ -10,13 +11,9 @@ const { User } = require("../models/user.js");
 
 var _this = this;
 
-function matchPrice(exchange, symbol, pricelist) {
-  let result = pricelist.find(function(element) {
-    if (element.exchange === exchange && element.symbol === symbol) {
-      return element;
-    }
-  });
-  return result ? Number(result.value) : undefined;
+function matchPrice(symbol, pricelist) {
+  let result = pricelist.find(element => element.symbol === symbol);
+  return result ? Number(result.price) : undefined;
 }
 
 exports.execute = function(user, index, priceList, stgResults) {
@@ -26,9 +23,10 @@ exports.execute = function(user, index, priceList, stgResults) {
       let summaryShort = stgResults.summaryShort;
       let summaryLarge = stgResults.summaryLarge;
       let userpair = user.monitor[index];
-      let price = matchPrice(user.exchange, userpair.symbol, priceList);
-      let btcusdt = matchPrice(user.exchange, "BTCUSDT", priceList);
+      let price = matchPrice(userpair.symbol, priceList);
+      let btcusdt = matchPrice("BTCUSDT", priceList);
       let tradeLog = {
+        user: user.username,
         symbol: userpair.symbol,
         resultShort: stgResults.resultShort,
         summaryShort,
@@ -70,6 +68,7 @@ exports.execute = function(user, index, priceList, stgResults) {
 
 exports.getSymbolPricesAPI = function() {
   return new Promise(function(resolve, reject) {
+    axiosRetry(axios, { retries: 3 });
     axios
       .get(process.env.LOADER_URL + "/getsymbolprices")
       .then(res => {
@@ -98,6 +97,7 @@ exports.getStrategyResultsAPI = function(
       largeInterval,
       config
     };
+    axiosRetry(axios, { retries: 3 });
     axios({
       method: "post",
       url: process.env.PLANNER_URL + "/getstrategyresults",

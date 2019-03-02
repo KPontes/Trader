@@ -149,7 +149,7 @@ var UserSchema = new mongoose.Schema(
     },
     comercial: {
       type: mongoose.Schema.Types.Mixed,
-      default: { plan: "FREE", priceUSD: 0, payInterval: 0, tradesLimit: 90 }
+      default: { plan: "FREE", maxSymbols: 1, priceUSD: 0, payInterval: 0, tradesLimit: 90 }
     },
     initBalance: {
       type: mongoose.Schema.Types.Mixed,

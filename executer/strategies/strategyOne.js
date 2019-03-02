@@ -4,6 +4,7 @@ const ctrexchange = require("../controller/exchange.js");
 const scrypto = require("../utils/simplecrypto.js");
 const { User } = require("../models/user.js");
 const { Trade } = require("../models/trade.js");
+const sysconst = require("../utils/sysconst.js");
 
 ("use strict");
 
@@ -11,14 +12,16 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
   return new Promise(async function(resolve, reject) {
     try {
       const userpair = user.monitor[index];
+      const mode = userpair.mode;
       const exchange = user.exchange;
       const symbol = userpair.symbol;
       const ordertype = "MARKET";
       const operL = largeOper.oper;
-      const operS = shortOper.oper;
+      let operS = shortOper.oper;
       const log = shortOper.log;
       let upduser = await updateStopLoss(user, index, currPrice);
       let order = {};
+      let orderId = mode === "real" ? "real" : "test";
       if (operS !== "none") {
         const tk = scrypto.decrypt(user.tk, process.env.SYSPD);
         const sk = scrypto.decrypt(user.sk, process.env.SYSPD);
@@ -33,15 +36,31 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
         );
         if (amount !== -1) {
           if (user.role !== "tracker") {
-            order = await ctrexchange.putOrder(exchange, operS, symbol, ordertype, amount, tk, sk);
-          }
+            order = await ctrexchange.putOrder(
+              exchange,
+              operS,
+              symbol,
+              ordertype,
+              amount,
+              mode,
+              tk,
+              sk
+            );
+            //console.log("**PUTORDER", order);
+            if (mode === "real") {
+              orderId = order.orderId;
+              amount = order.executedQty;
+              currPrice = order.fills[0].price;
+            }
+          } else orderId = "tracker";
           let doc = await updUserPostOrder(operS, user, index, currPrice);
-          console.log("Trade", operS);
+          if (["admin", "tracker"].indexOf(user.role) !== -1) console.log("Trade", operS);
           let trd = await Trade.insert(
             user._id,
             exchange,
             symbol,
             ordertype,
+            orderId,
             operS,
             currPrice,
             amount,
@@ -49,6 +68,8 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
           );
         } else {
           // if there is no balance on one direction, update direction to none
+          if (["admin", "tracker"].indexOf(user.role) !== -1)
+            console.log("**Direction updated to NONE");
           upduser = await User.findById(user._id);
           if (upduser) {
             upduser.monitor[index].lastDirection = "none";
@@ -81,7 +102,7 @@ function updateStopLoss(user, index, currPrice) {
             topVariation: userpair.stopLoss.topVariation,
             bottomVariation: userpair.stopLoss.bottomVariation,
             topPrice: currPrice,
-            bottomPrice: Number.MAX_SAFE_INTEGER
+            bottomPrice: sysconst.MAXPRICE // Number.MAX_SAFE_INTEGER
           };
           await upduser.save();
         }
@@ -123,7 +144,7 @@ function updUserPostOrder(oper, user, index, currPrice) {
             topVariation: userpair.stopLoss.topVariation,
             bottomVariation: userpair.stopLoss.bottomVariation,
             topPrice: currPrice,
-            bottomPrice: Number.MAX_SAFE_INTEGER
+            bottomPrice: sysconst.MAXPRICE //Number.MAX_SAFE_INTEGER
           };
         } else {
           upduser.monitor[index].stopLoss = {
@@ -164,7 +185,8 @@ function defineOperationShort(user, userpair, summary, currPrice, largeOper, tra
       tradeLog.variationRules = Object.assign({}, vrules);
       let drules = directionRules(vrules, userpair);
       tradeLog.directionRules = Object.assign({}, drules);
-      console.log("defineOperationShort", tradeLog);
+      if (["admin", "tracker"].indexOf(user.role) !== -1)
+        console.log("defineOperationShort", tradeLog);
       resolve({ oper: drules.oper, rule: drules.rule, log: tradeLog });
     } catch (err) {
       console.log("Err stOne defineOperationShort: ", err);

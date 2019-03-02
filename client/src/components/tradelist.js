@@ -5,13 +5,27 @@ import moment from "moment";
 class TradeList extends Component {
   constructor(props) {
     super(props);
+    this.handleCloseClick = this.handleCloseClick.bind(this);
     this.state = {
       msg: "",
       updated: false
     };
   }
 
+  handleCloseClick(changeEvent) {
+    this.props.sendData("hide"); //send to parent
+  }
+
   componentDidUpdate() {
+    if (this.props.trades[0] && !this.state.updated) {
+      let market = this.props.trades[0].symbol.slice(-4) === "USDT" ? "USDT" : "BTC";
+      let len = this.props.trades[0].symbol.length;
+      let token = this.props.trades[0].symbol.substr(0, len - market.length);
+      this.setState({ token, market, updated: true });
+    }
+  }
+
+  componentDidMount() {
     if (this.props.trades[0] && !this.state.updated) {
       let market = this.props.trades[0].symbol.slice(-4) === "USDT" ? "USDT" : "BTC";
       let len = this.props.trades[0].symbol.length;
@@ -25,6 +39,16 @@ class TradeList extends Component {
       <div className="bg-light font-weight-bold">
         <div className="row">
           <div className="col-md-6"> Trade List</div>
+          <div className="col-md-6" align="right">
+            <button
+              type="button"
+              className="close"
+              aria-label="Close"
+              onClick={event => this.handleCloseClick(event)}
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
         </div>
         <div className="row" align="right">
           <div className="col-md-1" align="center">
@@ -71,6 +95,8 @@ class TradeList extends Component {
       let color = diff >= 0 ? "text-primary" : "text-danger";
       if (!isNaN(percent)) {
         totPercent += percent;
+      } else {
+        percent = 0;
       }
       listItems.push(
         <div className="bg-light" align="right">

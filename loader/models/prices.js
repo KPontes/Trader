@@ -47,7 +47,6 @@ PricesSchema.statics.saveMany = async function(exchange, pairs, priceList) {
       for (let element of shortList) {
         let saved = await Prices.upsert(exchange, element.symbol, Number(element.price));
       }
-      console.log("Price shortList", shortList);
       resolve(shortList);
     } catch (err) {
       console.log("Err saveMany price: ", err);

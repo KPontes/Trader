@@ -57,12 +57,12 @@ class Security extends Component {
           if (response.status === 200) {
             _this.props.selectUser(response.data);
             _this.setState({ btnKeys: "Save Keys" });
+            alert("Keys Saved");
           }
         })
-        .catch(function(error) {
+        .catch(error => {
           _this.setState({ btnKeys: "Save Keys" });
-          alert("Error: " + error.message);
-          console.log(error);
+          alert("Error: " + error.response.data);
         });
     } catch (e) {
       alert("Error: " + e.message);

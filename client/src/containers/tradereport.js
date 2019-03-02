@@ -16,6 +16,7 @@ class TradeReport extends Component {
     this.handleOptionChange = this.handleOptionChange.bind(this);
     this.handleDateChange = this.handleDateChange.bind(this);
     this.onInputChange = this.onInputChange.bind(this);
+    this.getData = this.getData.bind(this);
     let startDate = new Date(this.props.user.createdAt);
     //startDate = startDate.toLocaleDateString("en-US");
     let symbol = this.props.user.monitor[0].symbol;
@@ -23,7 +24,9 @@ class TradeReport extends Component {
       trades: [],
       startDate,
       symbol,
-      perPage: 50
+      perPage: 50,
+      tradelist: "show",
+      btnEnabled: true
     };
   }
 
@@ -66,7 +69,7 @@ class TradeReport extends Component {
             </div>
             <div className="col-md-2">
               <label>
-                <b>Items per Page</b>
+                <b>Number of Lines</b>
               </label>
             </div>
           </div>
@@ -113,6 +116,7 @@ class TradeReport extends Component {
           type="button"
           className="btn btn-primary btn-sm cursor-pointer"
           id="generate"
+          disabled={!this.state.btnEnabled}
           onClick={event => this.handleBtnClick(event)}
         >
           Generate
@@ -148,7 +152,7 @@ class TradeReport extends Component {
       })
         .then(function(response) {
           if (response.data) {
-            _this.setState({ trades: response.data });
+            _this.setState({ trades: response.data, btnEnabled: false, tradelist: "show" });
           }
         })
         .catch(function(error) {
@@ -159,15 +163,26 @@ class TradeReport extends Component {
     }
   }
 
+  getData(val) {
+    //receive data from child component
+    if (val === "hide") {
+      this.setState({ tradelist: "hide", btnEnabled: true });
+    }
+  }
+
   render() {
     let role = this.props.user ? this.props.user.role : false;
     let limit = this.state.perPage;
     let filter = this.showFilters();
+    let panel = <div />;
+    if (this.state.tradelist !== "hide") {
+      panel = <TradeList sendData={this.getData} trades={this.state.trades.slice(-limit)} />;
+    }
     return (
       <div className="container">
         <Menu logged={role} />
         <div className="form-group">{filter}</div>
-        <TradeList trades={this.state.trades.slice(-limit)} />
+        {panel}
       </div>
     );
   }

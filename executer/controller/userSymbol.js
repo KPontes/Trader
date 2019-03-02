@@ -3,6 +3,7 @@ const moment = require("moment");
 
 const { User, UserPair } = require("../models/user.js");
 const { LoaderSettings } = require("../models/loaderSettings.js");
+const sysconst = require("../utils/sysconst.js");
 
 ("use strict");
 
@@ -32,6 +33,9 @@ function add(requestobj) {
           return element;
         }
       });
+      if (oneuser.role === "user" && oneuser.monitor.length >= oneuser.comercial.maxSymbols) {
+        throw "Maximum amount of symbols reached";
+      }
       if (userSymbols.length > 0) {
         throw "symbol already listed";
       }
@@ -211,9 +215,6 @@ function updateNumbers(requestobj) {
 function getTradeAmount(role, userpair, accinfo, oper, currPrice, btcusdt) {
   return new Promise(async function(resolve, reject) {
     try {
-      const USD_Min_Trade = 30;
-      const symbolRound = { BTC: 4, XRP: 0, ETH: 2 };
-
       function symbolBalance(symbol) {
         return accinfo.balances.filter(element => {
           if (element.asset === symbol.substring(0, element.asset.length)) {
@@ -230,6 +231,7 @@ function getTradeAmount(role, userpair, accinfo, oper, currPrice, btcusdt) {
       let balance;
       let tokenToTrade;
       let symbolAmount;
+      let marketAmount;
       let usdTradeValue;
       let market = userpair.symbol.slice(-4) === "USDT" ? "USDT" : "BTC";
       if (oper === "buy") {
@@ -240,29 +242,31 @@ function getTradeAmount(role, userpair, accinfo, oper, currPrice, btcusdt) {
         if (userpair.maxAmount.selector === "PERCENT") {
           //uses a maximum of 90% or the specified maxamount
           let percent = userpair.maxAmount.value > 90 ? 0.9 : userpair.maxAmount.value / 100;
-          symbolAmount = Number(balance[0].free) * percent;
+          marketAmount = Number(balance[0].free) * percent;
           if (market === "USDT") {
-            usdTradeValue = symbolAmount;
+            usdTradeValue = marketAmount;
             //How many tokens = available usd amount div token usd price
-            symbolAmount = symbolAmount / currPrice;
+            symbolAmount = marketAmount / currPrice; //in Token
           } else {
-            usdTradeValue = symbolAmount * btcusdt;
+            usdTradeValue = marketAmount * btcusdt;
             //How many tokens = available btc amount div token btc price
-            symbolAmount = symbolAmount / currPrice;
+            symbolAmount = marketAmount / currPrice; //in Token
           }
         }
         if (userpair.maxAmount.selector === "USD") {
           let usdMax = userpair.maxAmount.value;
-          symbolAmount = Number(balance[0].free) * 0.9;
+          marketAmount = Number(balance[0].free) * 0.9;
           if (market === "USDT") {
-            let usdBalance = symbolAmount;
-            symbolAmount = usdBalance > usdMax ? usdMax : usdBalance; //in USDT
-            usdTradeValue = symbolAmount;
+            let usdBalance = marketAmount;
+            marketAmount = usdBalance > usdMax ? usdMax : usdBalance; //in USDT
+            usdTradeValue = marketAmount;
+            symbolAmount = marketAmount / currPrice; //in Token
           } else {
             //get balance value available in BTC, but respecting maxValue defined inUSDT
-            let usdBalance = symbolAmount * btcusdt;
-            symbolAmount = usdBalance > usdMax ? usdMax / btcusdt : usdBalance / btcusdt; //in BTC
-            usdTradeValue = symbolAmount * btcusdt;
+            let usdBalance = marketAmount * btcusdt;
+            marketAmount = usdBalance > usdMax ? usdMax / btcusdt : usdBalance / btcusdt; //in BTC
+            usdTradeValue = marketAmount * btcusdt;
+            symbolAmount = marketAmount / currPrice; //in Token
           }
         }
       } else {
@@ -276,12 +280,18 @@ function getTradeAmount(role, userpair, accinfo, oper, currPrice, btcusdt) {
           usdTradeValue = symbolAmount * currPrice * btcusdt;
         }
       }
-      let toRound = symbolRound[tokenToTrade] !== undefined ? symbolRound[tokenToTrade] : 1;
+      let toRound =
+        sysconst.SYMBOLROUND[tokenToTrade] !== undefined ? sysconst.SYMBOLROUND[tokenToTrade] : 1;
       symbolAmount = _.round(symbolAmount, toRound);
-      if (usdTradeValue < USD_Min_Trade) symbolAmount = -1;
-      console.log("**tokenToTrade", tokenToTrade);
-      console.log("**symbolAmount", symbolAmount);
-      console.log("**usdTradeValue", usdTradeValue);
+      if (usdTradeValue < sysconst.USD_MIN_TRADE) symbolAmount = -1;
+
+      // console.log("**market", market);
+      // console.log("**marketAmount", marketAmount);
+      // console.log("**btcusdt", btcusdt);
+      // console.log("**tokenToTrade", tokenToTrade);
+      // console.log("**symbolAmount", symbolAmount);
+      // console.log("**usdTradeValue", usdTradeValue);
+
       resolve(symbolAmount);
     } catch (err) {
       console.log("Err user getTradeAmount: ");

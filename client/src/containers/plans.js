@@ -21,7 +21,7 @@ class Plans extends Component {
     axios({
       method: "get",
       baseURL: sysconfig.EXECUTER_URI,
-      url: "/getplans"
+      url: "/admin/getplans"
     })
       .then(function(response) {
         if (response.data) {

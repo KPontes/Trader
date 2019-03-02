@@ -152,7 +152,7 @@ class UserSymbol extends Component {
           <div className="col-md-2">Strategy</div>
           <div className="col-md-2">Mode</div>
           <div className="col-md-6">
-            <label data-tip="Configure actions allowed with trading stopped">Actions</label>
+            <label data-tip="Stop trade to enable actions configuring">Actions</label>
           </div>
           <ReactTooltip place="top" type="info" effect="float" />
         </div>

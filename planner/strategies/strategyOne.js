@@ -127,7 +127,7 @@ StrategyOne.prototype.updateResult = function(stdoc) {
         .concat(MACD)
         .concat(KLINES);
       const summary = await _this.summarize(exchange, symbol, period, result);
-      let st = await strategy.saveResultById(stdoc._id, result, summary);
+      let st = await strategy.saveResultById(stdoc._id, result, summary, 3);
       resolve({ result, summary });
     } catch (err) {
       console.log("Err update StrategyOne: ", err);

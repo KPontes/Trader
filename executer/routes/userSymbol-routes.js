@@ -11,8 +11,9 @@ router.post("/add", authenticate, async (req, res) => {
     var result = await ctrUserSymbol.add(req.body);
     res.status(200).send(result);
   } catch (e) {
-    console.log("Error: ", e);
-    res.status(400).send(e);
+    let returnErr = new Error();
+    returnErr.message = e;
+    res.status(400).send(returnErr.message);
   }
 });
 
@@ -21,8 +22,9 @@ router.delete("/del", authenticate, async (req, res) => {
     var result = await ctrUserSymbol.del(req.body);
     res.status(200).send(result);
   } catch (e) {
-    console.log("Error: ", e);
-    res.status(400).send(e);
+    let returnErr = new Error();
+    returnErr.message = e;
+    res.status(400).send(returnErr);
   }
 });
 
@@ -31,8 +33,9 @@ router.post("/changesymbol", authenticate, async (req, res) => {
     var result = await ctrUserSymbol.changeSymbol(req.body);
     res.status(200).send(result);
   } catch (e) {
-    console.log("Error: ", e);
-    res.status(400).send(e);
+    let returnErr = new Error();
+    returnErr.message = e;
+    res.status(400).send(returnErr);
   }
 });
 

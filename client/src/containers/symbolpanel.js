@@ -48,7 +48,7 @@ class SymbolPanel extends Component {
         })
         .catch(function(error) {
           console.log(error);
-          alert("Error: " + error.message);
+          alert("Error: " + error.response.data);
         });
     } catch (e) {
       alert("Error: " + e.message);
@@ -78,9 +78,9 @@ class SymbolPanel extends Component {
             _this.state.msg = "Symbol added!";
           }
         })
-        .catch(function(error) {
-          console.log(error);
-          alert("Error: " + error.message);
+        .catch(error => {
+          console.log("Add error", error.response);
+          alert("Error: " + error.response.data);
         });
     } catch (e) {
       alert("Error: " + e.message);
@@ -108,7 +108,7 @@ class SymbolPanel extends Component {
         })
         .catch(function(error) {
           console.log(error);
-          alert("Error: " + error.message);
+          alert("Error: " + error.response.data);
         });
     } catch (e) {
       alert("Error: " + e.message);
