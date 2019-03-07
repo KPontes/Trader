@@ -151,10 +151,6 @@ var UserSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: { plan: "FREE", maxSymbols: 1, priceUSD: 0, payInterval: 0, tradesLimit: 90 }
     },
-    initBalance: {
-      type: mongoose.Schema.Types.Mixed,
-      default: { USD: 0, BTC: 0 }
-    },
     validation: { type: String, default: "" },
     validtil: {
       type: Date,

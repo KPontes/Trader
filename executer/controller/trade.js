@@ -136,3 +136,22 @@ exports.list = function(reqobj) {
     }
   });
 };
+
+exports.perform = function(reqobj) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      let user = await User.findOne({ role: "tracker" });
+      let symbol = reqobj.symbol;
+      let tradeList = await Trade.find({
+        userId: user._id,
+        symbol
+      })
+        .sort({ createdAt: 1 })
+        .exec();
+      resolve(tradeList);
+    } catch (err) {
+      console.log("Err perform list ", err);
+      reject(err);
+    }
+  });
+};

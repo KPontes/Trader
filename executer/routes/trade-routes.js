@@ -17,4 +17,15 @@ router.post("/list", authenticate, async (req, res) => {
   }
 });
 
+router.get("/perform", async (req, res) => {
+  try {
+    var result = await ctrtrade.perform(req.query);
+    res.status(200).send(result);
+  } catch (e) {
+    let returnErr = new Error();
+    returnErr.message = e;
+    res.status(400).send(returnErr);
+  }
+});
+
 module.exports = router;

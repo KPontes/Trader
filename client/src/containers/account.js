@@ -5,10 +5,11 @@ import { bindActionCreators } from "redux";
 import { selectUser } from "../actions/root";
 import Menu from "../components/menu";
 import Plans from "./plans";
-import ExchangeSetting from "./exchangesetting";
+import ExchangeSetting from "../components/exchangesetting";
 import User from "./user";
 import UserSymbol from "./usersymbol";
 import Security from "./security";
+import BalanceReport from "./balancereport";
 
 class Account extends Component {
   constructor(props) {
@@ -112,7 +113,12 @@ class Account extends Component {
     let showplan = this.state.mplan ? <Plans /> : <div />;
     let showtoken = this.state.mtoken ? <UserSymbol /> : <div />;
     let showsecure = this.state.msecure ? <Security /> : <div />;
-    let showexchange = this.state.mxchange ? <ExchangeSetting /> : <div />;
+    let showexchange = this.state.mxchange ? (
+      <ExchangeSetting exchange={this.props.user.exchange} />
+    ) : (
+      <div />
+    );
+    let showbalance = this.state.mbal ? <BalanceReport /> : <div />;
     let sidemenu = this.sideMenu();
     let toRender = <div />;
     if (this.props.user && this.props.user.status !== "registered") {
@@ -124,6 +130,7 @@ class Account extends Component {
             {showsecure}
             {showplan}
             {showtoken}
+            {showbalance}
           </div>
         </div>
       );

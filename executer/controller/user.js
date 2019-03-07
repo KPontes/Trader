@@ -3,7 +3,6 @@ const moment = require("moment");
 
 const smail = require("../utils/sendmail.js");
 const scrypto = require("../utils/simplecrypto.js");
-const ctrtrade = require("./trade.js");
 const ctrexchange = require("./exchange.js");
 const ctrusersymbol = require("./userSymbol.js");
 const { User, UserPair } = require("../models/user.js");
@@ -62,71 +61,10 @@ function updateKeys(requestobj) {
         theuser.tk = scrypto.encrypt(requestobj.tk, process.env.SYSPD);
         theuser.sk = scrypto.encrypt(requestobj.sk, process.env.SYSPD);
       }
-      //now with keys, get initial balance
-      let balance = await calcBalance(theuser.exchange, "sum", requestobj.tk, requestobj.sk);
-      theuser.initBalance = { USD: balance.USD, BTC: balance.BTC };
       await theuser.save();
       resolve(theuser);
     } catch (err) {
       console.log("Err updateKeys: ", err);
-      reject(err);
-    }
-  });
-}
-
-function calcBalance(exchange, mode, tk, sk) {
-  return new Promise(async function(resolve, reject) {
-    try {
-      //get account Info from exchange, priceList and LoaderSettings
-      let accInfo = await ctrexchange.accountInfo(exchange, tk, sk);
-      let priceList = await ctrtrade.getSymbolPricesAPI();
-      let settings = await LoaderSettings.findOne({ exchange });
-      //extract unique token names from pairs
-      let symbols = settings.symbols
-        .map(element => {
-          let len = element.length;
-          let market = element.slice(-4) === "USDT" ? "USDT" : "BTC";
-          let token = element.substr(0, len - market.length);
-          return [market, token];
-        })
-        .flat();
-      //determine balance for each asset, in USD and BTC
-      let assets = _.uniq(symbols);
-      let balance = [];
-      let usdtValue;
-      let btcValue;
-      let btcUsdt = priceList.find(doc => doc.symbol === "BTCUSDT");
-      for (let element of assets) {
-        let amount = accInfo.balances.find(item => {
-          if (item.asset === element) {
-            return item.free;
-          }
-        });
-        if (element === "USDT") {
-          usdtValue = amount.free;
-          btcValue = usdtValue / Number(btcUsdt.value);
-        } else {
-          let price = priceList.find(doc => doc.symbol === element + "USDT");
-          usdtValue = Number(price.value) * Number(amount.free);
-          btcValue = Number(btcUsdt.value) === 0 ? 0 : usdtValue / Number(btcUsdt.value);
-        }
-        balance.push({
-          asset: element,
-          amount: amount.free,
-          USD: _.round(usdtValue, 2),
-          BTC: _.round(btcValue, 4)
-        });
-      }
-      //return detail or summary
-      if ((mode = "sum")) {
-        let totUsd = balance.reduce((acc, curr) => acc + curr.USD, 0);
-        let totBtc = balance.reduce((acc, curr) => acc + curr.BTC, 0);
-        resolve({ USD: totUsd, BTC: totBtc });
-      } else {
-        resolve(balance);
-      }
-    } catch (err) {
-      console.log("Err calcBalance: ", err);
       reject(err);
     }
   });
@@ -159,9 +97,38 @@ function play(reqobj) {
   });
 }
 
+function mode(reqobj) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      let i = reqobj.index;
+      let oneuser = await User.findOne({ email: reqobj.email });
+      if (!oneuser) {
+        throw "email not found";
+      }
+      if (!oneuser.monitor[i].mode) {
+        throw "symbol not found";
+      }
+      if (oneuser.status === "activeOn") {
+        throw "Stop trading to change mode";
+      }
+      if (oneuser.monitor[i].mode === "test") {
+        oneuser.monitor[i].mode = "real";
+      } else {
+        oneuser.monitor[i].mode = "test";
+      }
+      await oneuser.save();
+      resolve(oneuser);
+    } catch (err) {
+      console.log("Err user mode: ", err);
+      reject(err);
+    }
+  });
+}
+
 module.exports = {
   play: play,
   add: add,
+  mode: mode,
   updateKeys: updateKeys,
   createValidation: createValidation
 };

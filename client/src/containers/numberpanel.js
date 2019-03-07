@@ -64,7 +64,7 @@ class NumberPanel extends Component {
         })
         .catch(function(error) {
           console.log(error);
-          alert("Error: " + error.message);
+          alert("Error: " + error.response.data.message);
         });
     } catch (e) {
       alert("Error: " + e.message);

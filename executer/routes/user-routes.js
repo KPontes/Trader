@@ -93,7 +93,18 @@ router.post("/startstop", authenticate, async (req, res) => {
 
 router.post("/tradekeys", authenticate, async (req, res) => {
   try {
-    var result = ctruser.updateKeys(req.body);
+    var result = await ctruser.updateKeys(req.body);
+    res.status(200).send(_.omit(result, ["password", "tokens", "validation"]));
+  } catch (e) {
+    let returnErr = new Error();
+    returnErr.message = e;
+    res.status(400).send(returnErr);
+  }
+});
+
+router.patch("/mode", authenticate, async (req, res) => {
+  try {
+    var result = await ctruser.mode(req.body);
     res.status(200).send(_.omit(result, ["password", "tokens", "validation"]));
   } catch (e) {
     let returnErr = new Error();

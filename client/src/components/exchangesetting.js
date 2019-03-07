@@ -18,7 +18,7 @@ class ExchangeSetting extends Component {
     axios({
       method: "get",
       baseURL: sysconfig.EXECUTER_URI,
-      url: "/getsetting?exchange=binance"
+      url: "/getsetting?exchange=" + _this.props.exchange
     })
       .then(function(response) {
         if (response.data) {

@@ -46,6 +46,32 @@ class UserSymbol extends Component {
     if (e.target.value === "algo") {
       this.setState({ index: i, symbolpanel: "hide", numberpanel: "hide", algopanel: "show" });
     }
+    if (e.target.value === "mode") {
+      this.changeMode(i);
+    }
+  }
+
+  changeMode(index) {
+    var _this = this;
+    axios({
+      method: "patch",
+      baseURL: sysconfig.EXECUTER_URI,
+      url: "/user/mode",
+      data: {
+        email: this.props.user.email,
+        index
+      },
+      headers: { "x-auth": this.props.token }
+    })
+      .then(function(response) {
+        if (response.status === 200) {
+          _this.props.selectUser(response.data);
+        }
+      })
+      .catch(function(error) {
+        console.log(error);
+        alert("Error: " + error.response.data.message);
+      });
   }
 
   btns(element, index) {
@@ -85,19 +111,34 @@ class UserSymbol extends Component {
     );
   }
 
+  btnMode(element, indx) {
+    return (
+      <button
+        className="btn btn-light btn-sm cursor-pointer"
+        id={element.symbol}
+        value="mode"
+        onClick={event => this.handleChangeClick(event, indx)}
+      >
+        {element.mode.toUpperCase()}
+      </button>
+    );
+  }
+
   getUserSymbols() {
     if (this.props.user) {
-      var indx = 0;
+      let indx = 0;
       let btnLine;
+      let mode;
       let listItems = [];
       for (let element of this.props.user.monitor) {
         btnLine = this.btns(element, indx);
+        mode = this.btnMode(element, indx);
         listItems.push(
           <div>
             <div className="row bg-light" align="center">
               <div className="col-md-2">{element.symbol}</div>
               <div className="col-md-2">{element.strategy}</div>
-              <div className="col-md-2">{element.mode}</div>
+              <div className="col-md-2">{mode}</div>
               {btnLine}
             </div>
           </div>

@@ -1,6 +1,5 @@
 import React, { Component } from "react";
 import axios from "axios";
-import validator from "validator";
 import { connect } from "react-redux";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -126,14 +125,6 @@ class TradeReport extends Component {
       </div>
     );
     return btns;
-  }
-
-  tradeList() {
-    if (this.props.user) {
-      return <div> {this.props.user.username} Trades</div>;
-    } else {
-      return <div> waiting api plans results</div>;
-    }
   }
 
   handleBtnClick(event) {

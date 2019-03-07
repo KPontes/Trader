@@ -10,6 +10,7 @@ var { authenticate } = require("./middleware/authenticate.js");
 var userRoutes = require("./routes/user-routes.js");
 var userSymbolRoutes = require("./routes/userSymbol-routes.js");
 var tradeRoutes = require("./routes/trade-routes.js");
+var balanceRoutes = require("./routes/balance-routes.js");
 var adminRoutes = require("./routes/admin-routes.js");
 
 const app = express();
@@ -30,6 +31,7 @@ app.use("/user", userRoutes);
 app.use("/usersymbol", userSymbolRoutes);
 app.use("/trade", tradeRoutes);
 app.use("/admin", adminRoutes);
+app.use("/balance", balanceRoutes);
 
 app.get("/express", (req, res) => {
   console.log("executer welcome message");

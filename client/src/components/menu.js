@@ -12,7 +12,7 @@ const Menu = props => {
         <Link className="text-secondary mr-3" to="/trades">
           Trades
         </Link>
-        <Link className="text-secondary mr-3" to={"/"}>
+        <Link className="text-secondary mr-3" to={"/performance"}>
           Performance
         </Link>
         <Link className="text-secondary mr-3" to={"/signout"}>
@@ -30,7 +30,7 @@ const Menu = props => {
         <Link className="text-secondary mr-3" to={"/signup"}>
           Register
         </Link>
-        <Link className="text-secondary mr-3" to={"/"}>
+        <Link className="text-secondary mr-3" to={"/performance"}>
           Performance
         </Link>
       </div>

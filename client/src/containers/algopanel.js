@@ -85,7 +85,7 @@ class AlgoPanel extends Component {
 
   selectAlgorithm() {
     const opts = () => {
-      return ["Select"].concat(sysconfig.algos).map(element => {
+      return ["Select"].concat(sysconfig.Algos).map(element => {
         return (
           <option id={element.toUpperCase()} value={element.toUpperCase()}>
             {element}
