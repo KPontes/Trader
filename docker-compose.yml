@@ -69,6 +69,7 @@ services:
     mem_reservation: 1gb
     ports:
       - "7000:7000"
+      - "7500:7500"
     volumes:
       - ./executer:/usr/src/app
     environment:

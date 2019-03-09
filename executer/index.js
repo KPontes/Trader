@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+require("./serverWebSocket");
 const app = require("./app");
 var express = require("express");
 
@@ -17,19 +17,13 @@ var server = app.listen(EXECUTER_PORT, function() {
 // need this in docker container to properly exit since node doesn't handle SIGINT/SIGTERM
 // quit on ctrl-c when running docker in terminal
 process.on("SIGINT", function onSigint() {
-  console.info(
-    "Got SIGINT (aka ctrl-c in docker). Graceful shutdown ",
-    new Date().toISOString()
-  );
+  console.info("Got SIGINT (aka ctrl-c in docker). Graceful shutdown ", new Date().toISOString());
   shutdown();
 });
 
 // quit properly on docker stop
 process.on("SIGTERM", function onSigterm() {
-  console.info(
-    "Got SIGTERM (docker container stop). Graceful shutdown ",
-    new Date().toISOString()
-  );
+  console.info("Got SIGTERM (docker container stop). Graceful shutdown ", new Date().toISOString());
   shutdown();
 });
 

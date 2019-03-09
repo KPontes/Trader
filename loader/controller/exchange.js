@@ -38,6 +38,20 @@ exports.symbolPrice = function(exchange, pair = "") {
   });
 };
 
+exports.bookTicker = function(exchange, pair = "") {
+  return new Promise(async function(resolve, reject) {
+    try {
+      if ((exchange = "binance")) {
+        var data = await binance.bookTicker(pair);
+      }
+      resolve(data);
+    } catch (err) {
+      console.log("Err exchange bookTicker: ");
+      reject(err);
+    }
+  });
+};
+
 exports.serverTime = function(exchange) {
   return new Promise(async function(resolve, reject) {
     try {

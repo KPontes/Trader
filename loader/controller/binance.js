@@ -59,6 +59,27 @@ exports.symbolPrice = function(pair) {
   });
 };
 
+exports.bookTicker = function(pair) {
+  return new Promise(function(resolve, reject) {
+    var url = `${process.env["EXCHANGE_URL"]}/api/v3/ticker/bookTicker`;
+    if (pair !== "") {
+      url = `${url}?symbol=${pair}`;
+    }
+    axios
+      .get(url)
+      .then(res => {
+        resolve(res.data);
+      })
+      .catch(err => {
+        console.log("Err bookTicker: ");
+        if (err.response) {
+          console.log(`${err.response.status}: ${err.response.statusText} - ${err.response.data}`);
+        }
+        reject(err);
+      });
+  });
+};
+
 exports.serverTime = function() {
   return new Promise(function(resolve, reject) {
     // var tradeTime = moment().valueOf();

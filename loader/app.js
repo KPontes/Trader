@@ -7,6 +7,7 @@ const { mongoose } = require("./db/mongoose.js");
 const Monitor = require("./controller/monitor.js");
 const ctrIndicators = require("./controller/indicators.js");
 const ctrSettings = require("./controller/settings.js");
+const ctrArbitrage = require("./controller/arbitrage.js");
 const { Prices } = require("./models/prices");
 
 const app = express();
@@ -65,6 +66,16 @@ app.post("/addsetting", async (req, res) => {
 app.get("/getsymbolprices", async (req, res) => {
   try {
     var result = await Prices.getMany();
+    res.status(200).send(result);
+  } catch (e) {
+    console.log("Error: ", e);
+    res.status(400).send(e);
+  }
+});
+
+app.post("/arbitrage", async (req, res) => {
+  try {
+    var result = await ctrArbitrage.execute();
     res.status(200).send(result);
   } catch (e) {
     console.log("Error: ", e);

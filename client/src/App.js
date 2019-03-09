@@ -6,6 +6,7 @@ import Home from "./containers/home";
 import Signout from "./containers/signout";
 import TradeReport from "./containers/tradereport";
 import PerformanceReport from "./containers/performreport";
+import Arbitrage from "./containers/arbitrage";
 
 class App extends Component {
   render() {
@@ -18,6 +19,7 @@ class App extends Component {
             <Route exact path="/signup" component={Signup} />
             <Route exact path="/trades" component={TradeReport} />
             <Route exact path="/performance" component={PerformanceReport} />
+            <Route exact path="/arbitrage" component={Arbitrage} />
           </div>
         </BrowserRouter>
       </div>

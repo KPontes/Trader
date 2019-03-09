@@ -15,6 +15,9 @@ const Menu = props => {
         <Link className="text-secondary mr-3" to={"/performance"}>
           Performance
         </Link>
+        <Link className="text-secondary mr-3" to={"/arbitrage"}>
+          Arbitrage
+        </Link>
         <Link className="text-secondary mr-3" to={"/signout"}>
           Sign-out
         </Link>

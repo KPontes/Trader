@@ -11,6 +11,11 @@ ARG PORT=7000
 ENV PORT $PORT
 EXPOSE $PORT
 
+# default to port 7500 for websocket
+ARG PORTWS=7500
+ENV PORT $PORTWS
+EXPOSE $PORTWS
+
 # you'll likely want the latest npm, regardless of node version, for speed and fixes
 # but pin this version for the best stability
 RUN npm i npm@latest -g
