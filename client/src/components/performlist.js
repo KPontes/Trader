@@ -36,8 +36,6 @@ class PerformList extends Component {
     let perfList = [];
     let ind = 0;
     let totPercent = 0;
-    let tokenAmount;
-    let marketAmount;
     let prevMonth = moment(this.props.trades[0].createdAt).format("YYYY-MM");
     let prevPrice = this.props.trades[0].price;
     for (let element of this.props.trades) {

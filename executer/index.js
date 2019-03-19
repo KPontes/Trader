@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 require("./serverWebSocket");
 const app = require("./app");
-var express = require("express");
+//var express = require("express");
 
 // Constants
 const EXECUTER_PORT = process.env.EXECUTER_PORT || 8080;

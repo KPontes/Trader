@@ -7,7 +7,7 @@ const dev = {
 const prod = {
   PORT: 3000,
   EXECUTER_URI: "https://executer.aperium.io",
-  EXECUTER_WS: "http://ec2-3-89-212-171.compute-1.amazonaws.com:7500"
+  EXECUTER_WS: "https://executerws.aperium.io"
 };
 
 // Default to dev if not set

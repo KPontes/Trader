@@ -5,11 +5,11 @@ const binance = require("./binance");
 var _this = this;
 //binance set as default template
 //for other exchaneges will need to Normalize results
-exports.putOrder = function(exchange, oper, symbol, type, amount, mode, tk, sk) {
+exports.putOrder = function(exchange, oper, symbol, type, amount, price, mode, tk, sk) {
   return new Promise(async function(resolve, reject) {
     try {
       if (exchange === "binance") {
-        var data = await binance.putOrder(oper, symbol, type, amount, mode, tk, sk);
+        var data = await binance.putOrder(oper, symbol, type, amount, price, mode, tk, sk);
       }
       resolve(data);
     } catch (err) {
@@ -65,6 +65,58 @@ exports.symbolPrice = function(exchange, pair) {
       reject(err);
     }
   });
+};
+
+exports.bookTicker = function(exchange, pair = "") {
+  return new Promise(async function(resolve, reject) {
+    try {
+      if ((exchange = "binance")) {
+        var data = await binance.bookTicker(pair);
+      }
+      resolve(data);
+    } catch (err) {
+      console.log("Err exchange bookTicker: ");
+      reject(err);
+    }
+  });
+};
+
+exports.exchangeInfo = function(exchange) {
+  return new Promise(async function(resolve, reject) {
+    try {
+      if ((exchange = "binance")) {
+        var data = await binance.exchangeInfo();
+      }
+      resolve(data);
+    } catch (err) {
+      console.log("Err exchange exchangeInfo: ");
+      reject(err);
+    }
+  });
+};
+
+exports.lotSize = function(exchangeInfo, symbol) {
+  try {
+    if ((exchange = "binance")) {
+      var data = binance.lotSize(exchangeInfo, symbol);
+    }
+    return data;
+  } catch (err) {
+    console.log("Err exchange lotSize: ");
+    return err;
+  }
+};
+
+exports.minNotional = function(exchangeInfo, symbol) {
+  try {
+    if ((exchange = "binance")) {
+      var data = binance.minNotional(exchangeInfo, symbol);
+    }
+    return data;
+  } catch (err) {
+    console.log("Err exchange minNotional: ");
+    return err;
+  }
 };
 
 exports.serverTime = function(exchange) {

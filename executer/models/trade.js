@@ -19,7 +19,7 @@ var TradeSchema = new mongoose.Schema(
       minlength: 6,
       trim: true
     },
-    orderId: { type: String, required: true },
+    orderMode: { type: String },
     orderType: { type: String, enum: ["MARKET", "LIMIT"], required: true },
     price: { type: Number, required: true },
     quantity: { type: Number, required: true },
@@ -37,7 +37,7 @@ TradeSchema.statics.insert = async function(
   exchange,
   symbol,
   orderType,
-  orderId,
+  orderMode,
   side,
   price,
   quantity,
@@ -50,10 +50,10 @@ TradeSchema.statics.insert = async function(
       trade.exchange = exchange;
       trade.symbol = symbol;
       trade.orderType = orderType.toUpperCase();
-      trade.orderId = orderId;
+      trade.orderMode = orderMode;
       trade.side = side.toUpperCase();
-      trade.price = price;
-      trade.quantity = quantity;
+      trade.price = Number(price);
+      trade.quantity = Number(quantity);
       trade.log = log;
       await trade.save();
       resolve(trade);

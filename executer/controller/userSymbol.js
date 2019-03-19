@@ -212,17 +212,17 @@ function updateNumbers(requestobj) {
   });
 }
 
-function getTradeAmount(role, userpair, accinfo, oper, currPrice, btcusdt) {
+function symbolBalance(symbol, accinfo) {
+  return accinfo.balances.filter(element => {
+    if (element.asset === symbol.substring(0, element.asset.length)) {
+      return element;
+    }
+  });
+}
+
+function getTradeAmount(role, userpair, accInfo, oper, currPrice, btcusdt) {
   return new Promise(async function(resolve, reject) {
     try {
-      function symbolBalance(symbol) {
-        return accinfo.balances.filter(element => {
-          if (element.asset === symbol.substring(0, element.asset.length)) {
-            return element;
-          }
-        });
-      }
-
       if (role === "tracker") {
         //arbitrary value, as does not matter
         return resolve(5);
@@ -238,7 +238,7 @@ function getTradeAmount(role, userpair, accinfo, oper, currPrice, btcusdt) {
         let len = userpair.symbol.length;
         tokenToTrade = userpair.symbol.substr(0, len - market.length);
         //when buying a token, check availability of market (USDT or BTC) balance
-        balance = symbolBalance(market);
+        balance = symbolBalance(market, accInfo);
         if (userpair.maxAmount.selector === "PERCENT") {
           //uses a maximum of 90% or the specified maxamount
           let percent = userpair.maxAmount.value > 90 ? 0.9 : userpair.maxAmount.value / 100;
@@ -271,7 +271,7 @@ function getTradeAmount(role, userpair, accinfo, oper, currPrice, btcusdt) {
         }
       } else {
         //sell is from a token to USDT or BTC market. On sell uses total availability
-        balance = symbolBalance(userpair.symbol);
+        balance = symbolBalance(userpair.symbol, accInfo);
         tokenToTrade = balance[0].asset;
         symbolAmount = Number(balance[0].free) * 0.9;
         if (market === "USDT") {
@@ -305,5 +305,6 @@ module.exports = {
   del: del,
   changeSymbol: changeSymbol,
   updateNumbers: updateNumbers,
-  getTradeAmount: getTradeAmount
+  getTradeAmount: getTradeAmount,
+  symbolBalance: symbolBalance
 };

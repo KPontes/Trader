@@ -6,7 +6,11 @@ const exchange = require("./exchange");
 
 const strategy = "Arbitrage";
 
-const Markets = [{ mkt1: "BTC", mkt2: "ETH" }];
+const Markets = [
+  { mkt1: "BTC", mkt2: "ETH" },
+  { mkt1: "USDT", mkt2: "BTC" },
+  { mkt1: "BTC", mkt2: "BNB" }
+];
 
 const execute = function() {
   return new Promise(async function(resolve, reject) {
@@ -85,9 +89,9 @@ const evaluateOrderBook = function(arbiList, orderBook) {
         let triangular = [];
         let newDiff;
         let resultp = positiveDiff(item, tokenMkt1, tokenMkt2, mkt2mkt1);
-        let newDiffp = 1 - 1 / resultp[0].price * resultp[1].price * resultp[2].price;
+        let newDiffp = 1 / resultp[0].price * resultp[1].price * resultp[2].price - 1;
         let resultn = negativeDiff(item, tokenMkt1, tokenMkt2, mkt2mkt1);
-        let newDiffn = 1 - 1 / resultn[0].price / resultn[1].price * resultn[2].price;
+        let newDiffn = 1 / resultn[0].price / resultn[1].price * resultn[2].price - 1;
         if (newDiffp > newDiffn) {
           newDiff = newDiffp;
           triangular = resultp;
@@ -95,13 +99,22 @@ const evaluateOrderBook = function(arbiList, orderBook) {
           newDiff = newDiffn;
           triangular = resultn;
         }
+
+        console.log("+++++++++++++++++++++++++++++++++++++++++++++++");
+        console.log("**newDiffp", newDiffp);
+        console.log("**resultp", resultp);
+        console.log("**newDiffn", newDiffn);
+        console.log("**resultn", resultn);
+        console.log("**newDiff", newDiff);
+        console.log("**triangular", triangular);
+
         let oCandidate = _.pick(item, ["token", "mkt1", "mkt2"]);
         oCandidate.TKMK1 = tokenMkt1;
         oCandidate.TKMK2 = tokenMkt2;
         oCandidate.MK2KM1 = mkt2mkt1;
         oCandidate.triangular = triangular;
         oCandidate.bookDiff = newDiff;
-        oCandidate.candidate = Math.abs(newDiff) > 0.004 ? true : false;
+        oCandidate.candidate = newDiff > 0 ? true : false;
         candidates.push(oCandidate);
       }
     }
@@ -115,8 +128,13 @@ const evaluateOrderBook = function(arbiList, orderBook) {
 const positiveDiff = function(item, tokenMkt1, tokenMkt2, mkt2mkt1) {
   //buy at best ask (seller) price and sell at best bid (buyer) price
   try {
-    let maxQtyTkn = tokenMkt1.askQty;
-    triangular = [
+    let maxQtyTkn = Math.min(
+      tokenMkt1.askQty,
+      tokenMkt1.bidQty,
+      tokenMkt2.askQty,
+      tokenMkt2.bidQty
+    );
+    let triangular = [
       {
         symbol: tokenMkt1.symbol,
         oper: "buy",
@@ -149,8 +167,13 @@ const positiveDiff = function(item, tokenMkt1, tokenMkt2, mkt2mkt1) {
 const negativeDiff = function(item, tokenMkt1, tokenMkt2, mkt2mkt1) {
   //buy at best ask (seller) price and sell at best bid (buyer) price
   try {
-    let maxQtyTkn = tokenMkt2.askQty;
-    triangular = [
+    let maxQtyTkn = Math.min(
+      tokenMkt1.askQty,
+      tokenMkt1.bidQty,
+      tokenMkt2.askQty,
+      tokenMkt2.bidQty
+    );
+    let triangular = [
       {
         symbol: mkt2mkt1.symbol,
         oper: "buy",
@@ -191,20 +214,20 @@ const calculate = function(mkt1, mkt2, mkt2mkt1, shortList, tokens) {
         let mkt2Amount = tokenAmount * tokenMkt2.price;
         let mkt1Amount = mkt2Amount * mkt2mkt1.price;
         let diff = mkt1Amount - 1;
-        if (Math.abs(diff) > 0.003) {
-          arbiList.push({
-            tokenMkt1,
-            tokenMkt2,
-            mkt2mkt1,
-            token,
-            mkt1,
-            mkt2,
-            tokenAmount,
-            mkt1Amount,
-            mkt2Amount,
-            diff
-          });
-        }
+        //if (Math.abs(diff) > 0.003) {
+        arbiList.push({
+          tokenMkt1,
+          tokenMkt2,
+          mkt2mkt1,
+          token,
+          mkt1,
+          mkt2,
+          tokenAmount,
+          mkt1Amount,
+          mkt2Amount,
+          diff
+        });
+        //}
       }
     }
     return arbiList;

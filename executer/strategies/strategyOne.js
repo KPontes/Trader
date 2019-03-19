@@ -21,7 +21,7 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
       const log = shortOper.log;
       let upduser = await updateStopLoss(user, index, currPrice);
       let order = {};
-      let orderId = mode === "real" ? "real" : "test";
+      let orderMode = mode === "real" ? "real" : "test";
       if (operS !== "none") {
         const tk = scrypto.decrypt(user.tk, process.env.SYSPD);
         const sk = scrypto.decrypt(user.sk, process.env.SYSPD);
@@ -42,17 +42,18 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
               symbol,
               ordertype,
               amount,
+              0,
               mode,
               tk,
               sk
             );
             //console.log("**PUTORDER", order);
             if (mode === "real") {
-              orderId = order.orderId;
+              orderMode = "real";
               amount = order.executedQty;
               currPrice = order.fills[0].price;
             }
-          } else orderId = "tracker";
+          } else orderMode = "tracker";
           let doc = await updUserPostOrder(operS, user, index, currPrice);
           if (["admin", "tracker"].indexOf(user.role) !== -1) console.log("Trade", operS);
           let trd = await Trade.insert(
@@ -60,7 +61,7 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
             exchange,
             symbol,
             ordertype,
-            orderId,
+            orderMode,
             operS,
             currPrice,
             amount,

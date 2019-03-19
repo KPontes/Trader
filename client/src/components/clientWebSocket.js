@@ -8,7 +8,7 @@ function subscribeToArbitrage(cb) {
   //socket.emit("teste");
   socket.on("newarbitrage", data => {
     cb(null, data);
-    console.log("data", data);
+    //console.log("data", data);
   });
 
   socket.emit("subscribeToArbi", 15000);

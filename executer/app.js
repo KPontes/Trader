@@ -1,5 +1,5 @@
 require("dotenv").config();
-require("./serverWebSocket");
+//require("./serverWebSocket");
 const express = require("express");
 const bodyParser = require("body-parser");
 const _ = require("lodash");
@@ -13,6 +13,7 @@ var userSymbolRoutes = require("./routes/userSymbol-routes.js");
 var tradeRoutes = require("./routes/trade-routes.js");
 var balanceRoutes = require("./routes/balance-routes.js");
 var adminRoutes = require("./routes/admin-routes.js");
+var arbiRoutes = require("./routes/arbitrage-routes.js");
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use("/usersymbol", userSymbolRoutes);
 app.use("/trade", tradeRoutes);
 app.use("/admin", adminRoutes);
 app.use("/balance", balanceRoutes);
+app.use("/custom", arbiRoutes);
 
 app.get("/express", (req, res) => {
   console.log("executer welcome message");

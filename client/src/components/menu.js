@@ -33,9 +33,6 @@ const Menu = props => {
         <Link className="text-secondary mr-3" to={"/signup"}>
           Register
         </Link>
-        <Link className="text-secondary mr-3" to={"/performance"}>
-          Performance
-        </Link>
       </div>
     );
   }
