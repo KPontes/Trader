@@ -3,22 +3,10 @@ const moment = require("moment");
 
 const { User, UserPair } = require("../models/user.js");
 const { LoaderSettings } = require("../models/loaderSettings.js");
+const ctrexchange = require("./exchange.js");
 const sysconst = require("../utils/sysconst.js");
 
 ("use strict");
-
-const defaultConfig = {
-  calc_sma: [4, 7, 25, 99],
-  calc_rsi: [14],
-  calc_bbands: [20],
-  calc_macd: [12, 26, 9],
-  calc_klines: [1],
-  rule_sma: [],
-  rule_rsi: [30, 70, 7],
-  rule_bbands: [100],
-  rule_macd: [],
-  rule_klines: [0.005]
-};
 
 function add(requestobj) {
   return new Promise(async function(resolve, reject) {
@@ -63,7 +51,7 @@ function add(requestobj) {
           bottomPrice: Number.MAX_SAFE_INTEGER
         };
       }
-      let oConfig = requestobj.usedefault ? defaultConfig : requestobj;
+      let oConfig = requestobj.usedefault ? sysconst.DEFAULTCONFIG : requestobj;
       let configcalc = {};
       let configrule = {};
       Object.entries(oConfig).map(element => {
@@ -80,7 +68,7 @@ function add(requestobj) {
       await oneuser.save();
       resolve(oneuser);
     } catch (err) {
-      console.log("Err user addSymbol: ", err);
+      console.log("Err userSymbol add: ", err);
       reject(err);
     }
   });
@@ -135,7 +123,7 @@ function changeSymbol(requestobj) {
       await oneuser.save();
       resolve(oneuser);
     } catch (err) {
-      console.log("Err user changeSymbol: ", err);
+      console.log("Err userSymbol change: ", err);
       reject(err);
     }
   });
@@ -171,7 +159,7 @@ function validateSymbol(monitor, symbol, exchange) {
       }
       resolve(true);
     } catch (err) {
-      console.log("Err user changeSymbol: ", err);
+      console.log("Err user validateSymbol: ", err);
       reject(err);
     }
   });
@@ -212,6 +200,29 @@ function updateNumbers(requestobj) {
   });
 }
 
+function updateAlgoParams(requestobj) {
+  return new Promise(async function(resolve, reject) {
+    //add both, default configuration or post request symbol
+    try {
+      let oneuser = await User.findOne({ email: requestobj.email });
+      if (!oneuser) {
+        throw "email not found";
+      }
+      let ind = requestobj.index;
+      if (oneuser.monitor[ind].symbol !== requestobj.symbol) {
+        throw "Invalid symbol";
+      }
+      oneuser.monitor[ind].configcalc = requestobj.configcalc;
+      oneuser.monitor[ind].configrule = requestobj.configrule;
+      await oneuser.save();
+      resolve(oneuser);
+    } catch (err) {
+      console.log("Err userSymbol updateAlgoParams: ", err);
+      reject(err);
+    }
+  });
+}
+
 function symbolBalance(symbol, accinfo) {
   return accinfo.balances.filter(element => {
     if (element.asset === symbol.substring(0, element.asset.length)) {
@@ -220,14 +231,13 @@ function symbolBalance(symbol, accinfo) {
   });
 }
 
-function getTradeAmount(role, userpair, accInfo, oper, currPrice, btcusdt) {
+function getTradeAmount(role, userpair, accInfo, oper, currPrice, btcusdt, exchangeInfo) {
   return new Promise(async function(resolve, reject) {
     try {
       if (role === "tracker") {
         //arbitrary value, as does not matter
         return resolve(5);
       }
-
       let balance;
       let tokenToTrade;
       let symbolAmount;
@@ -280,10 +290,13 @@ function getTradeAmount(role, userpair, accInfo, oper, currPrice, btcusdt) {
           usdTradeValue = symbolAmount * currPrice * btcusdt;
         }
       }
-      let toRound =
-        sysconst.SYMBOLROUND[tokenToTrade] !== undefined ? sysconst.SYMBOLROUND[tokenToTrade] : 1;
+
+      let toRound = ctrexchange.lotSize(exchangeInfo, userpair.symbol);
       symbolAmount = _.round(symbolAmount, toRound);
-      if (usdTradeValue < sysconst.USD_MIN_TRADE) symbolAmount = -1;
+      let minNotional = ctrexchange.minNotional(exchangeInfo, userpair.symbol);
+      if (symbolAmount * currPrice < minNotional) {
+        throw "Err Min_Notional. Price * Qty too small " + userpair.symbol;
+      }
 
       // console.log("**market", market);
       // console.log("**marketAmount", marketAmount);
@@ -306,5 +319,6 @@ module.exports = {
   changeSymbol: changeSymbol,
   updateNumbers: updateNumbers,
   getTradeAmount: getTradeAmount,
-  symbolBalance: symbolBalance
+  symbolBalance: symbolBalance,
+  updateAlgoParams: updateAlgoParams
 };

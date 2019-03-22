@@ -137,7 +137,7 @@ Monitor.prototype.generateIndicators = function(_exchg, _pair, _candles, _per) {
             it.name === "SMA" ? loader.sma.push(newItem) : loader.ema.push(newItem);
           }
         }
-        if (it.name === "KLines") {
+        if (it.name === "KLINES") {
           loader.klines.data = _candles;
         }
         if (it.name === "RSI") {

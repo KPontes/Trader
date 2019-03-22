@@ -29,94 +29,10 @@ function findDocs(arr, value) {
   return result ? result.data : undefined;
 }
 
-StrategyOne.prototype.findResult = function(exchange, symbol, period) {
+StrategyOne.prototype.obtainResult = function(exchange, symbol, period) {
   var _this = this;
   return new Promise(async function(resolve, reject) {
     try {
-      //Find if config passed on constructor exists on collection Strategy
-      var stgList = await Strategy.find({ name: strategyName, exchange, symbol, period });
-      let stg;
-      let match;
-      for (let doc of stgList) {
-        match = true;
-        Object.keys(_this.config.calc).forEach(key => {
-          let cfgCalcInput = _this.config.calc[key];
-          let cfgCalcDb = doc.configcalc[key];
-          if (cfgCalcDb.length !== cfgCalcInput.length) match = false;
-          cfgCalcInput.map(item => {
-            //if thete is an input item without match on db
-            if (_.indexOf(cfgCalcDb, item) === -1) {
-              match = false;
-            }
-          });
-        });
-        Object.keys(_this.config.rule).forEach(key => {
-          let cfgRuleInput = _this.config.rule[key];
-          let cfgRuleDb = doc.configrule[key];
-          if (cfgRuleDb.length !== cfgRuleInput.length) match = false;
-          cfgRuleInput.map(item => {
-            if (_.indexOf(cfgRuleDb, item) === -1) {
-              match = false;
-            }
-          });
-        });
-        if (match) {
-          stg = doc;
-          break;
-        }
-      }
-      if (!match) {
-        return resolve({ stgdoc: false, action: "insert" });
-      }
-      if (!(stg.lastresult && stg.lastsummary)) {
-        return resolve({ stgdoc: stg, action: "update" });
-      }
-      if (moment().subtract(1, "minutes") > stg.updatedAt) {
-        return resolve({ stgdoc: stg, action: "update" });
-      }
-      resolve({ stgdoc: stg, action: "none" });
-    } catch (err) {
-      console.log("Err generate: ", err);
-      reject(err);
-    }
-  });
-};
-
-StrategyOne.prototype.createConfig = function(exchange, pair, period) {
-  var _this = this;
-  return new Promise(async function(resolve, reject) {
-    try {
-      let newStrategy = {
-        name: strategyName,
-        exchange,
-        pair,
-        period
-      };
-      //transform config into an input like the postman request
-      Object.keys(_this.config.calc).forEach(key => {
-        let newkey = "calc-" + key;
-        newStrategy[newkey] = _this.config.calc[key];
-      });
-      Object.keys(_this.config.rule).forEach(key => {
-        let newkey = "rule-" + key;
-        newStrategy[newkey] = _this.config.rule[key];
-      });
-      let stg = await strategy.saveConfig(newStrategy);
-      resolve({ stgdoc: stg, action: "update" });
-    } catch (err) {
-      console.log("Err update StrategyOne: ", err);
-      reject(err);
-    }
-  });
-};
-
-StrategyOne.prototype.updateResult = function(stdoc) {
-  var _this = this;
-  return new Promise(async function(resolve, reject) {
-    try {
-      const exchange = stdoc.exchange;
-      const symbol = stdoc.symbol;
-      const period = stdoc.period;
       const SMA = await _this.processSMA(exchange, symbol, period);
       const RSI = await _this.processRSI(exchange, symbol, period);
       const BBANDS = await _this.processBBands(exchange, symbol, period);
@@ -126,8 +42,7 @@ StrategyOne.prototype.updateResult = function(stdoc) {
         .concat(BBANDS)
         .concat(MACD)
         .concat(KLINES);
-      const summary = await _this.summarize(exchange, symbol, period, result);
-      let st = await strategy.saveResultById(stdoc._id, result, summary, 3);
+      const summary = await _this.summarize(result);
       resolve({ result, summary });
     } catch (err) {
       console.log("Err update StrategyOne: ", err);
@@ -136,8 +51,7 @@ StrategyOne.prototype.updateResult = function(stdoc) {
   });
 };
 
-StrategyOne.prototype.summarize = function(exchange, pair, period, lastResult) {
-  var _this = this;
+StrategyOne.prototype.summarize = function(lastResult) {
   return new Promise(async function(resolve, reject) {
     try {
       summary = {
@@ -189,7 +103,7 @@ StrategyOne.prototype.processSMA = function(exchange, pair, period) {
       }
       var obj = [];
       obj[0] = mavg.applyCrossingLines(shortMA, mediumMA, longMA);
-      obj[1] = mavg.applyTrend(xShortMA);
+      obj[1] = mavg.applyTrend(xShortMA, _this.config.rule.sma[0]);
       resolve(obj); //this obj MUST have named properties: oper, factor
     } catch (err) {
       console.log(`Err ${strategyName} processSMA:`, err);
@@ -302,4 +216,85 @@ StrategyOne.prototype.processKLines = function(exchange, pair, period) {
 //     macd: [],
 //     klines: [0.005]
 //   }
+// };
+
+// StrategyOne.prototype.findResult = function(exchange, symbol, period) {
+//   var _this = this;
+//   return new Promise(async function(resolve, reject) {
+//     try {
+//       //Find if config passed on constructor exists on collection Strategy
+//       var stgList = await Strategy.find({ name: strategyName, exchange, symbol, period });
+//       let stg;
+//       let match;
+//       for (let doc of stgList) {
+//         match = true;
+//         Object.keys(_this.config.calc).forEach(key => {
+//           let cfgCalcInput = _this.config.calc[key];
+//           let cfgCalcDb = doc.configcalc[key];
+//           if (cfgCalcDb.length !== cfgCalcInput.length) match = false;
+//           cfgCalcInput.map(item => {
+//             //if thete is an input item without match on db
+//             if (_.indexOf(cfgCalcDb, item) === -1) {
+//               match = false;
+//             }
+//           });
+//         });
+//         Object.keys(_this.config.rule).forEach(key => {
+//           let cfgRuleInput = _this.config.rule[key];
+//           let cfgRuleDb = doc.configrule[key];
+//           if (cfgRuleDb.length !== cfgRuleInput.length) match = false;
+//           cfgRuleInput.map(item => {
+//             if (_.indexOf(cfgRuleDb, item) === -1) {
+//               match = false;
+//             }
+//           });
+//         });
+//         if (match) {
+//           stg = doc;
+//           break;
+//         }
+//       }
+//       if (!match) {
+//         return resolve({ stgdoc: false, action: "insert" });
+//       }
+//       if (!(stg.lastresult && stg.lastsummary)) {
+//         return resolve({ stgdoc: stg, action: "update" });
+//       }
+//       if (moment().subtract(1, "minutes") > stg.updatedAt) {
+//         return resolve({ stgdoc: stg, action: "update" });
+//       }
+//       resolve({ stgdoc: stg, action: "none" });
+//     } catch (err) {
+//       console.log("Err generate: ", err);
+//       reject(err);
+//     }
+//   });
+// };
+
+// StrategyOne.prototype.createConfig = function(exchange, pair, period) {
+//   var _this = this;
+//   return new Promise(async function(resolve, reject) {
+//     try {
+//       let newStrategy = {
+//         name: strategyName,
+//         exchange,
+//         pair,
+//         period
+//       };
+//       //transform config into an input like the postman request
+//       Object.keys(_this.config.calc).forEach(key => {
+//         let newkey = "calc-" + key;
+//         newStrategy[newkey] = _this.config.calc[key];
+//       });
+//       Object.keys(_this.config.rule).forEach(key => {
+//         let newkey = "rule-" + key;
+//         newStrategy[newkey] = _this.config.rule[key];
+//       });
+//       let stg = await strategy.saveConfig(newStrategy);
+//       resolve({ stgdoc: stg, action: "update" });
+//     } catch (err) {
+//       console.log("Err update StrategyOne: ", err);
+//       reject(err);
+//     }
+//   });
 // };

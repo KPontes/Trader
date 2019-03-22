@@ -19,18 +19,18 @@ function matchPrice(symbol, pricelist) {
 exports.execute = function(user, index, priceList, stgResults) {
   return new Promise(async function(resolve, reject) {
     try {
-      console.log("**********************************************");
-      let summaryShort = stgResults.summaryShort;
-      let summaryLarge = stgResults.summaryLarge;
+      console.log("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
       let userpair = user.monitor[index];
+      let [userResultShort, summaryShort] = summarize(userpair.algos, stgResults.resultShort);
+      let [userResultLarge, summaryLarge] = summarize(userpair.algos, stgResults.resultLarge);
       let price = matchPrice(userpair.symbol, priceList);
       let btcusdt = matchPrice("BTCUSDT", priceList);
       let tradeLog = {
         user: user.username,
         symbol: userpair.symbol,
-        resultShort: stgResults.resultShort,
+        resultShort: userResultShort,
         summaryShort,
-        resultLarge: stgResults.resultLarge,
+        resultLarge: userResultLarge,
         summaryLarge,
         price: price,
         top: userpair.stopLoss.topPrice,
@@ -155,3 +155,41 @@ exports.perform = function(reqobj) {
     }
   });
 };
+
+function summarize(algos, lastResult) {
+  try {
+    let userResult = lastResult.filter(element => {
+      if (algos.indexOf(element.indic.toUpperCase()) !== -1) {
+        return element;
+      }
+    });
+    let summary = {
+      countBuy: 0,
+      countSell: 0,
+      countNone: 0,
+      factorBuy: 0,
+      factorSell: 0,
+      factorNone: 0
+    };
+    userResult.map(element => {
+      switch (element.oper) {
+        case "buy":
+          summary.countBuy += 1;
+          summary.factorBuy += element.factor;
+          break;
+        case "sell":
+          summary.countSell += 1;
+          summary.factorSell += element.factor;
+          break;
+        default:
+          summary.countNone += 1;
+          summary.factorNone += element.factor;
+          break;
+      }
+    });
+    return [userResult, summary];
+  } catch (err) {
+    console.log(`Err Trade summarize:`, err);
+    return err;
+  }
+}

@@ -26,13 +26,15 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
         const tk = scrypto.decrypt(user.tk, process.env.SYSPD);
         const sk = scrypto.decrypt(user.sk, process.env.SYSPD);
         let accinfo = await ctrexchange.accountInfo(exchange, tk, sk);
+        let exchangeInfo = await ctrexchange.exchangeInfo(user.exchange);
         let amount = await ctrUserSymbol.getTradeAmount(
           user.role,
           userpair,
           accinfo,
           operS,
           currPrice,
-          btcusdt
+          btcusdt,
+          exchangeInfo
         );
         if (amount !== -1) {
           if (user.role !== "tracker") {
@@ -55,7 +57,7 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
             }
           } else orderMode = "tracker";
           let doc = await updUserPostOrder(operS, user, index, currPrice);
-          if (["admin", "tracker"].indexOf(user.role) !== -1) console.log("Trade", operS);
+          if (["admin"].indexOf(user.role) !== -1) console.log("Trade", operS);
           let trd = await Trade.insert(
             user._id,
             exchange,
@@ -69,8 +71,7 @@ function makeOrder(shortOper, largeOper, user, index, currPrice, btcusdt) {
           );
         } else {
           // if there is no balance on one direction, update direction to none
-          if (["admin", "tracker"].indexOf(user.role) !== -1)
-            console.log("**Direction updated to NONE");
+          if (["admin"].indexOf(user.role) !== -1) console.log("**Direction updated to NONE");
           upduser = await User.findById(user._id);
           if (upduser) {
             upduser.monitor[index].lastDirection = "none";
@@ -186,8 +187,7 @@ function defineOperationShort(user, userpair, summary, currPrice, largeOper, tra
       tradeLog.variationRules = Object.assign({}, vrules);
       let drules = directionRules(vrules, userpair);
       tradeLog.directionRules = Object.assign({}, drules);
-      if (["admin", "tracker"].indexOf(user.role) !== -1)
-        console.log("defineOperationShort", tradeLog);
+      if (["admin"].indexOf(user.role) !== -1) console.log("defineOperationShort", tradeLog);
       resolve({ oper: drules.oper, rule: drules.rule, log: tradeLog });
     } catch (err) {
       console.log("Err stOne defineOperationShort: ", err);
@@ -232,12 +232,12 @@ function variationRules(previousResult, userpair, currPrice, largeOper) {
     if (inputOper === "sell" && currPrice < userpair.stopLoss.topPrice) {
       if (Math.abs(topVariation) > userpair.stopLoss.topVariation) {
         oResult.oper = inputOper;
-        oResult.rule = "stop loss";
+        oResult.rule = "stop loss away from resistance";
       } else {
         //on bearish market, sell fast
-        if (currPrice < userpair.lastPrice && largeOper === inputOper) {
+        if (currPrice < userpair.lastPrice * (1 + sysconst.TRADEFEE) && largeOper === inputOper) {
           oResult.oper = inputOper;
-          oResult.rule = "stop loss";
+          oResult.rule = "stop loss recover last price";
         } else {
           oResult.oper = "none";
           oResult.rule = "price variation smaller than stop loss";
@@ -249,12 +249,12 @@ function variationRules(previousResult, userpair, currPrice, largeOper) {
     if (inputOper === "buy" && currPrice > userpair.stopLoss.bottomPrice) {
       if (Math.abs(bottomVariation) > userpair.stopLoss.bottomVariation) {
         oResult.oper = inputOper;
-        oResult.rule = "start gain";
+        oResult.rule = "start gain away from support";
       } else {
         //on bullish market, buy fast
-        if (currPrice > userpair.lastPrice && largeOper === inputOper) {
+        if (currPrice > userpair.lastPrice * (1 - sysconst.TRADEFEE) && largeOper === inputOper) {
           oResult.oper = inputOper;
-          oResult.rule = "start gain";
+          oResult.rule = "start gain recover last price";
         } else {
           oResult.oper = "none";
           oResult.rule = "price variation smaller than start gain";

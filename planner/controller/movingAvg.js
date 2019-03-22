@@ -25,15 +25,9 @@ function getData(exchange, symbol, period) {
 
 function applyCrossingLines(shortMA, mediumMA, longMA) {
   var objMA = { indic: "MA", oper: "none", factor: 0, rules: "no cross line" };
-  if (
-    shortMA.slice(-1) > mediumMA.slice(-1) ||
-    shortMA.slice(-1) > longMA.slice(-1)
-  ) {
+  if (shortMA.slice(-1) > mediumMA.slice(-1) || shortMA.slice(-1) > longMA.slice(-1)) {
     objMA = { indic: "MA", oper: "buy", factor: 1, rules: "one up cross" };
-    if (
-      shortMA.slice(-1) > mediumMA.slice(-1) &&
-      shortMA.slice(-1) > longMA.slice(-1)
-    ) {
+    if (shortMA.slice(-1) > mediumMA.slice(-1) && shortMA.slice(-1) > longMA.slice(-1)) {
       objMA.factor = 2;
       objMA.rules = "two up cross";
       if (mediumMA.slice(-1) > longMA.slice(-1)) {
@@ -43,15 +37,9 @@ function applyCrossingLines(shortMA, mediumMA, longMA) {
     }
   }
 
-  if (
-    shortMA.slice(-1) < mediumMA.slice(-1) ||
-    shortMA.slice(-1) < longMA.slice(-1)
-  ) {
+  if (shortMA.slice(-1) < mediumMA.slice(-1) || shortMA.slice(-1) < longMA.slice(-1)) {
     objMA = { indic: "MA", oper: "sell", factor: 1, rules: "one down cross" };
-    if (
-      shortMA.slice(-1) < mediumMA.slice(-1) &&
-      shortMA.slice(-1) < longMA.slice(-1)
-    ) {
+    if (shortMA.slice(-1) < mediumMA.slice(-1) && shortMA.slice(-1) < longMA.slice(-1)) {
       objMA.factor = 2;
       objMA.rules = "two down cross";
       if (mediumMA.slice(-1) < longMA.slice(-1)) {
@@ -64,22 +52,21 @@ function applyCrossingLines(shortMA, mediumMA, longMA) {
   return objMA;
 }
 
-function applyTrend(xshortMA) {
+function applyTrend(xshortMA, lastCandles) {
   var objMA = { indic: "MA", oper: "none", factor: 0, rules: "sideway" };
   //uptrend curve. Check 3 last avgs going up
-  if (
-    xshortMA.slice(-1) > xshortMA.slice(-2, -1) &&
-    xshortMA.slice(-2, -1) > xshortMA.slice(-3, -2)
-  ) {
+  partial = xshortMA.slice(-lastCandles);
+  let trendCount = 0;
+  for (var i = 1; i < partial.length; i++) {
+    trendCount = partial[i] > partial[i - 1] ? (trendCount += 1) : (trendCount -= 1);
+  }
+  if (trendCount === lastCandles - 1) {
     objMA.oper = "buy";
     objMA.factor = 3;
     objMA.rules = "change to up trend";
   }
   //downtrend curve. Check 3 last avgs going down
-  if (
-    xshortMA.slice(-1) < xshortMA.slice(-2, -1) &&
-    xshortMA.slice(-2, -1) < xshortMA.slice(-3, -2)
-  ) {
+  if (-trendCount === lastCandles - 1) {
     objMA.oper = "sell";
     objMA.factor = 3;
     objMA.rules = "change to down trend";

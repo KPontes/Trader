@@ -60,6 +60,7 @@ function validateConfig(oConfig, period) {
           }
         });
         if (indicrow.length === 0) match = false;
+        //now validate the values within the found algorithm key
         cfgCalcValues.map(item => {
           if (_.indexOf(indicrow[0].params, item.toString()) === -1) {
             match = false;

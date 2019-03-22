@@ -80,7 +80,7 @@ function saveLoad(exchange, symbol, period, name, loader) {
       }
 
       switch (name) {
-        case "KLines":
+        case "KLINES":
           iloader.docs = await prepareSaveKlines(loader.klines);
           break;
         case "SMA":

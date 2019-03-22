@@ -18,9 +18,9 @@ class NumberPanel extends Component {
     let index = this.props.index;
     let symbol = this.props.user.monitor[index].symbol;
     let maxSelector = this.props.user.monitor[index].maxAmount.selector;
-    let maxValue = this.props.user.monitor[index].maxAmount.value;
-    let topVariation = this.props.user.monitor[index].stopLoss.topVariation * 100;
-    let bottomVariation = this.props.user.monitor[index].stopLoss.bottomVariation * 100;
+    let maxValue = Number(this.props.user.monitor[index].maxAmount.value);
+    let topVariation = Number(this.props.user.monitor[index].stopLoss.topVariation) * 100;
+    let bottomVariation = Number(this.props.user.monitor[index].stopLoss.bottomVariation) * 100;
     this.state = {
       showdetail: false,
       msg: "",
@@ -32,29 +32,30 @@ class NumberPanel extends Component {
     };
   }
 
-  handleChangeClick(e, i) {
+  handleChangeClick() {
     try {
       if (
-        !validator.isNumeric(this.state.topVariation) ||
-        !validator.isNumeric(this.state.bottomVariation) ||
-        !validator.isNumeric(this.state.maxValue)
+        !validator.isNumeric(this.state.topVariation.toString()) ||
+        !validator.isNumeric(this.state.bottomVariation.toString()) ||
+        !validator.isNumeric(this.state.maxValue.toString())
       ) {
-        throw new Error("Invalid email");
+        throw new Error("Invalid Number field");
       }
+      let data = {
+        email: this.props.user.email,
+        symbol: this.state.symbol,
+        maxSelector: this.state.maxSelector,
+        maxValue: this.state.maxValue,
+        topVariation: Number(this.state.topVariation) / 100,
+        bottomVariation: Number(this.state.bottomVariation) / 100
+      };
       var _this = this;
       axios({
         method: "patch",
         baseURL: sysconfig.EXECUTER_URI,
         url: "/usersymbol/numbers",
-        data: {
-          email: this.props.user.email,
-          symbol: this.state.symbol,
-          maxSelector: this.state.maxSelector,
-          maxValue: this.state.maxValue,
-          topVariation: this.state.topVariation / 100,
-          bottomVariation: this.state.bottomVariation / 100
-        },
-        headers: { "x-auth": this.props.token }
+        data,
+        headers: { "x-auth": _this.props.token }
       })
         .then(function(response) {
           if (response.status === 200) {
@@ -64,7 +65,7 @@ class NumberPanel extends Component {
         })
         .catch(function(error) {
           console.log(error);
-          alert("Error: " + error.response.data.message);
+          alert("Err Numbers: " + error.response.data.message);
         });
     } catch (e) {
       alert("Error: " + e.message);
@@ -91,7 +92,7 @@ class NumberPanel extends Component {
           type="button"
           className="btn btn-info btn-sm cursor-pointer"
           id="update"
-          onClick={event => this.handleChangeClick(event)}
+          onClick={event => this.handleChangeClick()}
         >
           Update
         </button>
@@ -193,19 +194,6 @@ class NumberPanel extends Component {
               onChange={this.handleOptionChange}
             />
             <label className="form-check-label">USD</label>
-          </div>
-          <div className="form-check" align="left">
-            <input
-              className="form-check-input"
-              name="maxSelector"
-              id="maxBtc"
-              type="radio"
-              value="BTC"
-              disabled
-              checked={this.state.maxSelector === "BTC"}
-              onChange={this.handleOptionChange}
-            />
-            <label className="form-check-label">BTC</label>
           </div>
           <input
             type="text"

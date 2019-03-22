@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
+import axios from "axios";
 
 import sysconfig from "../config";
 import { selectUser } from "../actions/root";
@@ -18,6 +19,7 @@ class AlgoPanel extends Component {
     this.handleOptionChange = this.handleOptionChange.bind(this);
     let index = this.props.index;
     let symbol = this.props.user.monitor[index].symbol;
+    this.getIndicators("1m");
     this.state = {
       symbol: symbol,
       algo: "",
@@ -25,10 +27,34 @@ class AlgoPanel extends Component {
     };
   }
 
+  getIndicators(period) {
+    let url = `/indicator/list?period=${period}`;
+    var _this = this;
+    axios({
+      method: "get",
+      baseURL: sysconfig.EXECUTER_URI,
+      url
+    })
+      .then(function(response) {
+        console.log("**RESPONSE", response.data);
+        if (response.data) {
+          _this.setState({ indicator: response.data });
+        }
+      })
+      .catch(function(error) {
+        console.log("Err getIndicators:", error);
+      });
+  }
+
   handleOptionChange(changeEvent) {
+    if (!this.state.indicator) this.getIndicators();
+    let selectedIndicator = this.state.indicator.filter(elem => {
+      return elem.name.toUpperCase() === changeEvent.target.value.toUpperCase();
+    });
     this.setState({
       algo: changeEvent.target.value.toUpperCase(),
-      msg: ""
+      msg: "",
+      selectedIndicator: selectedIndicator[0]
     });
   }
 
@@ -36,50 +62,35 @@ class AlgoPanel extends Component {
     this.props.sendData("hide-algo-panel"); //send to parent
   }
 
-  btns() {
-    let btns = (
-      <div className="col-md-2">
-        <button
-          type="button"
-          className="btn btn-primary btn-sm cursor-pointer"
-          disabled
-          id={this.state.algo}
-        >
-          Edit
-        </button>
-        <p className="text-danger"> {this.state.msg}</p>
-      </div>
-    );
-    return btns;
-  }
-
   showAlgorithm() {
     //let userPair = this.props.user.monitor[this.props.index];
     let result = <div />;
+    let indicator = this.state.selectedIndicator;
+    let index = this.props.index;
     switch (this.state.algo.toUpperCase()) {
       case "SMA":
-        result = <AlgoSMA user={this.props.user} index={this.props.index} />;
+        result = <AlgoSMA index={index} indicator={indicator} />;
         break;
       case "EMA":
-        result = <AlgoEMA user={this.props.user} index={this.props.index} />;
+        result = <AlgoEMA user={this.props.user} index={index} indicator={indicator} />;
         break;
       case "MACD":
-        result = <AlgoMACD user={this.props.user} index={this.props.index} />;
+        result = <AlgoMACD user={this.props.user} index={index} indicator={indicator} />;
         break;
       case "RSI":
-        result = <AlgoRSI user={this.props.user} index={this.props.index} />;
+        result = <AlgoRSI user={this.props.user} index={index} indicator={indicator} />;
         break;
       case "BBANDS":
-        result = <AlgoBBands user={this.props.user} index={this.props.index} />;
+        result = <AlgoBBands user={this.props.user} index={index} indicator={indicator} />;
         break;
       case "KLINES":
-        result = <AlgoKLines user={this.props.user} index={this.props.index} />;
+        result = <AlgoKLines user={this.props.user} index={index} indicator={indicator} />;
         break;
       default:
         result = <div />;
         break;
     }
-    return <div className="col-md-8">{result}</div>;
+    return <div className="col-md-10">{result}</div>;
   }
 
   selectAlgorithm() {
@@ -94,7 +105,6 @@ class AlgoPanel extends Component {
     };
 
     var lista = opts();
-    let btnLine = this.btns();
     let cfgAlgo = this.showAlgorithm();
     let details;
     if (this.props.user) {
@@ -128,7 +138,6 @@ class AlgoPanel extends Component {
                 {lista}
               </select>
             </div>
-            {btnLine}
             {cfgAlgo}
           </div>
         </div>

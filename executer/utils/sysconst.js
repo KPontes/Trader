@@ -1,9 +1,22 @@
 const maxPrice = 999999999999;
-const USD_Min_Trade = 30;
-const symbolRound = { BTC: 4, XRP: 0, ETH: 2 };
+const tradeFee = 0.001;
+const algos = ["MA", "SMA", "EMA", "KLINES", "RSI", "MACD", "BBANDS"];
+const defaultConfig = {
+  calc_sma: [4, 7, 25, 99],
+  calc_rsi: [14],
+  calc_bbands: [20],
+  calc_macd: [12, 26, 9],
+  calc_klines: [1],
+  rule_sma: [3],
+  rule_rsi: [30, 70, 7],
+  rule_bbands: [100],
+  rule_macd: [],
+  rule_klines: [0.005]
+};
 
 module.exports = {
   MAXPRICE: maxPrice,
-  USD_MIN_TRADE: USD_Min_Trade,
-  SYMBOLROUND: symbolRound
+  TRADEFEE: tradeFee,
+  ALGOS: algos,
+  DEFAULTCONFIG: defaultConfig
 };

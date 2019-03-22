@@ -5,6 +5,8 @@ const scrypto = require("../utils/simplecrypto.js");
 const _ = require("lodash");
 const bcrypt = require("bcryptjs");
 
+const sysconst = require("../utils/sysconst");
+
 const maxPrice = 999999999999;
 const OrderDirection = Object.freeze({
   buy: "buy",
@@ -54,6 +56,7 @@ var UserPairSchema = new mongoose.Schema(
       required: true,
       default: "test"
     },
+    algos: sysconst.ALGOS,
     configcalc: mongoose.Schema.Types.Mixed,
     configrule: mongoose.Schema.Types.Mixed,
     summaryRule: {
@@ -78,9 +81,9 @@ var UserPairSchema = new mongoose.Schema(
     stopLoss: {
       type: mongoose.Schema.Types.Mixed,
       default: {
-        topVariation: 0.005,
+        topVariation: 0.02,
         topPrice: 0.0001,
-        bottomVariation: 0.01,
+        bottomVariation: 0.04,
         bottomPrice: maxPrice //Number.MAX_SAFE_INTEGER
       }
     }

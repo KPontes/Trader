@@ -50,4 +50,15 @@ router.patch("/numbers", authenticate, async (req, res) => {
   }
 });
 
+router.patch("/updatealgo", authenticate, async (req, res) => {
+  try {
+    var result = await ctrUserSymbol.updateAlgoParams(req.body);
+    res.status(200).send(result);
+  } catch (e) {
+    let returnErr = new Error();
+    returnErr.message = e;
+    res.status(400).send(returnErr);
+  }
+});
+
 module.exports = router;

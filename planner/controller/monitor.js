@@ -37,16 +37,7 @@ function stgOneOutputs(exchange, symbol, period, config) {
   return new Promise(async function(resolve, reject) {
     try {
       var strategyOne = new StrategyOne(config);
-      let stOneDoc = {};
-      stOneDoc = await strategyOne.findResult(exchange, symbol, period);
-      let output = { result: stOneDoc.stgdoc.lastresult, summary: stOneDoc.stgdoc.lastsummary };
-      if (stOneDoc.action !== "none") {
-        if (stOneDoc.action === "insert") {
-          stOneDoc = await strategyOne.createConfig(exchange, symbol, period);
-        }
-        let updatedDoc = await strategyOne.updateResult(stOneDoc.stgdoc);
-        output = { result: updatedDoc.result, summary: updatedDoc.summary };
-      }
+      let output = await strategyOne.obtainResult(exchange, symbol, period);
       resolve(output);
     } catch (err) {
       console.log("Err Planner stgOneOutputs: ", moment().format("YYYYMMDD:HHmmss"));
