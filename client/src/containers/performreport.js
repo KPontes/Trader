@@ -11,12 +11,16 @@ class PerformanceReport extends Component {
     super(props);
     this.handleBtnClick = this.handleBtnClick.bind(this);
     this.handleOptionChange = this.handleOptionChange.bind(this);
+    this.handleCheckChange = this.handleCheckChange.bind(this);
     this.getData = this.getData.bind(this);
+    let startDate = new Date(this.props.user.createdAt);
     this.state = {
       exchange: "binance",
       trades: [],
       symbol: "",
       tradelist: "show",
+      startDate,
+      mode: "real",
       btnEnabled: true
     };
   }
@@ -32,6 +36,8 @@ class PerformanceReport extends Component {
       });
     };
 
+    let test = this.state.mode === "test";
+    let real = this.state.mode === "real";
     var lista = opts();
     let btnLine = this.btns();
     let details = (
@@ -52,6 +58,11 @@ class PerformanceReport extends Component {
           <div className="col-md-3">
             <label>
               <b>Symbol</b>
+            </label>
+          </div>
+          <div className="col-md-2">
+            <label>
+              <b>Mode</b>
             </label>
           </div>
         </div>
@@ -76,6 +87,32 @@ class PerformanceReport extends Component {
             >
               {lista}
             </select>
+          </div>
+          <div className="form-group col-md-2 p-1">
+            <span className="border border-secondary p-2">
+              <div className="form-check form-check-inline">
+                <input
+                  className="form-check-input "
+                  type="radio"
+                  id="checkTest"
+                  value="test"
+                  checked={test}
+                  onChange={this.handleCheckChange}
+                />
+                <label className="form-check-label">test</label>
+              </div>
+              <div className="form-check form-check-inline">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  id="checkReal"
+                  value="real"
+                  checked={real}
+                  onChange={this.handleCheckChange}
+                />
+                <label className="form-check-label">real</label>
+              </div>
+            </span>
           </div>
           {btnLine}
         </div>
@@ -104,12 +141,27 @@ class PerformanceReport extends Component {
     return btns;
   }
 
+  handleCheckChange(changeEvent) {
+    this.setState({
+      mode: changeEvent.target.value
+    });
+  }
+
   handleBtnClick(event) {
     try {
       let _this = this;
-      let url = `${sysconfig.EXECUTER_URI}/trade/perform?symbol=${this.state.symbol}`;
-      axios
-        .get(url)
+      axios({
+        method: "post",
+        baseURL: sysconfig.EXECUTER_URI,
+        url: "/trade/list",
+        data: {
+          email: this.props.user.email,
+          symbol: this.state.symbol,
+          startDate: this.state.startDate,
+          mode: this.state.mode
+        },
+        headers: { "x-auth": this.props.token }
+      })
         .then(function(response) {
           if (response.data) {
             _this.setState({ trades: response.data, btnEnabled: false, tradelist: "show" });
@@ -118,6 +170,13 @@ class PerformanceReport extends Component {
         .catch(function(error) {
           console.log(error);
         });
+      // let url = `${sysconfig.EXECUTER_URI}/trade/perform?symbol=${this.state.symbol}`;
+      // axios
+      //   .get(url)
+      //   .then(function(response) {
+      //     if (response.data) {
+      //       _this.setState({ trades: response.data, btnEnabled: false, tradelist: "show" });
+      //     }
     } catch (e) {
       console.log(e);
     }

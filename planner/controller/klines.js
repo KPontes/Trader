@@ -21,23 +21,27 @@ function getData(exchange, symbol, period) {
   });
 }
 
-function applyBusinessRules(data, variation) {
+function applyBusinessRules(data, variation, groupSize, trendSize) {
   return new Promise(async function(resolve, reject) {
     try {
-      var kDirection = []; //stores ups and downs for last two groups of 4 candles
-      var kLines = data.slice(-8);
+      if (!groupSize) groupSize = 4;
+      if (!trendSize) trendSize = 8;
+      let max = Math.max(groupSize, trendSize);
+      let kDirection = []; //stores ups and downs for last two groups of 4 candles
+      let kLines = data.slice(-max);
       for (var i = 0; i < kLines.length; i++) {
         kLines[i].close >= kLines[i].open ? (kDirection[i] = 1) : (kDirection[i] = -1);
       }
-
-      var groupVariation = (kLines[3].close - kLines[0].open) / kLines[0].open;
-      var candleVariation = (kLines[3].close - kLines[3].open) / kLines[3].open;
+      let group = data.slice(-groupSize);
+      let lastCandle = group[group.length - 1];
+      var groupVariation = (group[group.length - 1].close - kLines[0].open) / kLines[0].open;
+      var candleVariation = (lastCandle.close - lastCandle.open) / lastCandle.open;
 
       var objKLines = [];
       var obj = {};
       obj = variationRules(variation, candleVariation, groupVariation);
       if (obj.oper && obj.factor) objKLines.push(obj);
-      obj = directionRules(kDirection);
+      obj = directionRules(kDirection, groupSize);
       if (obj.oper && obj.factor) objKLines.push(obj);
       obj = trendInversionRules(kDirection);
       if (obj.oper && obj.factor) objKLines.push(obj);
@@ -81,18 +85,18 @@ function variationRules(variation, candleVariation, groupVariation) {
   return obj;
 }
 
-function directionRules(kDirection) {
+function directionRules(kDirection, groupSize) {
   //keeps the sum of up/down of last four candles.
   //If all in the same kDirection indicates strong trend
   var obj = { indic: "KLINES" };
   const reducer = (accumulator, currentValue) => accumulator + currentValue;
-  switch (kDirection.slice(-4).reduce(reducer)) {
-    case 4:
+  switch (kDirection.slice(-groupSize).reduce(reducer)) {
+    case groupSize:
       obj.oper = "buy";
       obj.rules = "same 4 up dir";
       obj.factor = 3;
       break;
-    case -4:
+    case -groupSize:
       obj.oper = "sell";
       obj.rules = "same 4 down dir";
       obj.factor = 3;
@@ -106,18 +110,24 @@ function directionRules(kDirection) {
   return obj;
 }
 
-function trendInversionRules(kDirection) {
-  //ultimos 7 candles positivos e atual negativo. Inversão forte de tendencia
+function trendInversionRules(kDirection, trendSize) {
+  //ultimos candles positivos e atual negativo. Inversão de tendencia
   obj = {};
   const reducer = (accumulator, currentValue) => accumulator + currentValue;
-  if (kDirection.slice(0, 7).reduce(reducer) === 7 && kDirection.slice(-1)[0] === -1) {
+  if (
+    kDirection.slice(-(trendSize + 1)).reduce(reducer) === trendSize - 1 &&
+    kDirection.slice(-1)[0] === -1
+  ) {
     obj.indic = "KLINES";
     obj.oper = "sell";
     obj.rules = "inversion to downtrend";
     obj.factor = 2;
   }
-  //ultimos 7 candles negativos e atual positivo. Inversão forte de tendencia
-  if (kDirection.slice(0, 7).reduce(reducer) === -7 && kDirection.slice(-1)[0] === 1) {
+  //ultimos candles negativos e atual positivo. Inversão de tendencia
+  if (
+    kDirection.slice(-(trendSize + 1)).reduce(reducer) === -(trendSize - 1) &&
+    kDirection.slice(-1)[0] === 1
+  ) {
     obj.indic = "KLINES";
     obj.oper = "buy";
     obj.rules = "inversion to uptrend";

@@ -3,7 +3,7 @@ const _ = require("lodash");
 const axios = require("axios");
 const axiosRetry = require("axios-retry");
 
-const stgOne = require("../strategies/strategyOne.js");
+const stgOne = require("./strategyOne.js");
 const { Trade } = require("../models/trade.js");
 const { User } = require("../models/user.js");
 
@@ -119,12 +119,14 @@ exports.list = function(reqobj) {
   return new Promise(async function(resolve, reject) {
     try {
       let email = reqobj.email;
+      let mode = reqobj.mode;
       let user = await User.findOne({ email });
       let symbol = reqobj.symbol;
       let startDate = reqobj.startDate;
       let tradeList = await Trade.find({
         userId: user._id,
         symbol,
+        orderMode: mode,
         createdAt: { $gte: startDate }
       })
         .sort({ createdAt: 1 })

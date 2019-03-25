@@ -14,7 +14,7 @@ const prod = {
 const config = process.env.REACT_APP_STAGE === "prod" ? prod : dev;
 
 const Symbols = ["BTCUSDT", "XRPUSDT", "ETHUSDT"]; //for performance report
-const Algos = ["SMA", "EMA", "KLines", "RSI", "BBands", "MACD"];
+const Algos = ["SMA", "EMA", "KLINES", "RSI", "BBANDS", "MACD"];
 const SOCKETIO_PORT = 3100;
 
 export default {

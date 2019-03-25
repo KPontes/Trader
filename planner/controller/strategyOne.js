@@ -34,11 +34,13 @@ StrategyOne.prototype.obtainResult = function(exchange, symbol, period) {
   return new Promise(async function(resolve, reject) {
     try {
       const SMA = await _this.processSMA(exchange, symbol, period);
+      const EMA = await _this.processEMA(exchange, symbol, period);
       const RSI = await _this.processRSI(exchange, symbol, period);
       const BBANDS = await _this.processBBands(exchange, symbol, period);
       const MACD = await _this.processMACD(exchange, symbol, period);
       const KLINES = await _this.processKLines(exchange, symbol, period);
-      const result = SMA.concat(RSI)
+      const result = SMA.concat(EMA)
+        .concat(RSI)
         .concat(BBANDS)
         .concat(MACD)
         .concat(KLINES);
@@ -90,7 +92,7 @@ StrategyOne.prototype.processSMA = function(exchange, pair, period) {
   var _this = this;
   return new Promise(async function(resolve, reject) {
     try {
-      const arr = await mavg.getData(exchange, pair, period);
+      const arr = await mavg.getData(exchange, pair, period, "SMA");
       if (!arr.docs || arr.docs.length === 0) {
         throw "Err missing iloader SMA docs";
       }
@@ -99,7 +101,7 @@ StrategyOne.prototype.processSMA = function(exchange, pair, period) {
       const mediumMA = findDocs(arr.docs, _this.config.calc.sma[2]);
       const longMA = findDocs(arr.docs, _this.config.calc.sma[3]);
       if (!xShortMA || !shortMA || !mediumMA || !longMA) {
-        throw "Configured MA params not found on load";
+        throw "Configured SMA params not found on load";
       }
       var obj = [];
       obj[0] = mavg.applyCrossingLines(shortMA, mediumMA, longMA);
@@ -107,6 +109,30 @@ StrategyOne.prototype.processSMA = function(exchange, pair, period) {
       resolve(obj); //this obj MUST have named properties: oper, factor
     } catch (err) {
       console.log(`Err ${strategyName} processSMA:`, err);
+      reject(err);
+    }
+  });
+};
+
+StrategyOne.prototype.processEMA = function(exchange, pair, period) {
+  var _this = this;
+  return new Promise(async function(resolve, reject) {
+    try {
+      const arr = await mavg.getData(exchange, pair, period, "EMA");
+      if (!arr.docs || arr.docs.length === 0) {
+        throw "Err missing iloader EMA docs";
+      }
+      const shortMA = findDocs(arr.docs, _this.config.calc.ema[0]);
+      const mediumMA = findDocs(arr.docs, _this.config.calc.ema[1]);
+      const longMA = findDocs(arr.docs, _this.config.calc.sma[2]);
+      if (!shortMA || !mediumMA || !longMA) {
+        throw "Configured EMA params not found on load";
+      }
+      var obj = [];
+      obj[0] = mavg.applyCrossingLinesEMA(shortMA, mediumMA, longMA);
+      resolve(obj); //this obj MUST have named properties: oper, factor
+    } catch (err) {
+      console.log(`Err ${strategyName} processEMA:`, err);
       reject(err);
     }
   });
@@ -144,7 +170,11 @@ StrategyOne.prototype.processBBands = function(exchange, pair, period) {
       if (!searchData) {
         throw "Err missing iloader BBands docs";
       }
-      const result = await bbands.applyBusinessRules(searchData, _this.config.rule.bbands[0]);
+      const result = await bbands.applyBusinessRules(
+        searchData,
+        _this.config.rule.bbands[0],
+        _this.config.rule.bbands[1]
+      );
       resolve(result);
     } catch (err) {
       console.log(`Err ${strategyName} processBBands:`, err);
@@ -192,7 +222,12 @@ StrategyOne.prototype.processKLines = function(exchange, pair, period) {
       if (!searchData) {
         throw "Err missing iloader KLINES docs";
       }
-      const result = await klines.applyBusinessRules(searchData, _this.config.rule.klines[0]);
+      const result = await klines.applyBusinessRules(
+        searchData,
+        _this.config.rule.klines[0],
+        _this.config.rule.klines[1],
+        _this.config.rule.klines[2]
+      );
       resolve(result);
     } catch (err) {
       console.log(`Err ${strategyName} processKlines:`, err);

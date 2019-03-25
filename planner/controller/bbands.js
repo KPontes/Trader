@@ -23,7 +23,7 @@ function getData(exchange, symbol, period) {
   });
 }
 
-function applyBusinessRules(bbands, recent) {
+function applyBusinessRules(bbands, recent = 100, count = 3) {
   return new Promise(async function(resolve, reject) {
     try {
       const countOverBought = bbands
@@ -49,7 +49,7 @@ function applyBusinessRules(bbands, recent) {
         objBBands[0].oper = "sell";
         objBBands[0].factor = 3;
         objBBands[0].rules = "bbands overbought";
-        if (countOverBought > countOverSold && countOverBought >= 3) {
+        if (countOverBought > countOverSold && countOverBought >= count) {
           objBBands[0].oper = "buy"; //walking upper band on trend
           objBBands[0].rules += " / walk upper band";
         }
@@ -58,7 +58,7 @@ function applyBusinessRules(bbands, recent) {
         objBBands[0].oper = "buy";
         objBBands[0].factor = 3;
         objBBands[0].rules = "bbands oversold";
-        if (countOverSold > countOverBought && countOverSold >= 3) {
+        if (countOverSold > countOverBought && countOverSold >= count) {
           objBBands[0].oper = "sell"; //walking lower band on trend
           objBBands[0].rules += " / walk lower band";
         }

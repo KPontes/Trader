@@ -5,12 +5,12 @@ import axios from "axios";
 
 import sysconfig from "../config";
 import { selectUser } from "../actions/root";
-import AlgoSMA from "../components/algo-sma";
-import AlgoEMA from "../components/algo-ema";
-import AlgoMACD from "../components/algo-macd";
-import AlgoRSI from "../components/algo-rsi";
-import AlgoBBands from "../components/algo-bbands";
-import AlgoKLines from "../components/algo-klines";
+import AlgoSMA from "./algo-sma";
+import AlgoEMA from "./algo-ema";
+import AlgoMACD from "./algo-macd";
+import AlgoRSI from "./algo-rsi";
+import AlgoBBands from "./algo-bbands";
+import AlgoKLines from "./algo-klines";
 
 class AlgoPanel extends Component {
   constructor(props) {
@@ -36,7 +36,6 @@ class AlgoPanel extends Component {
       url
     })
       .then(function(response) {
-        console.log("**RESPONSE", response.data);
         if (response.data) {
           _this.setState({ indicator: response.data });
         }
@@ -44,6 +43,35 @@ class AlgoPanel extends Component {
       .catch(function(error) {
         console.log("Err getIndicators:", error);
       });
+  }
+
+  generalInfo() {
+    let index = this.props.index;
+    let monitor = this.props.user.monitor[index];
+    let list = monitor.algos.map(element => {
+      return "[" + element + "]  ";
+    });
+    let panel = (
+      <span>
+        <div className="row">
+          <div className="col-md-12">
+            Currently selected algorithms
+            <br />
+            <small>{list} </small>
+          </div>
+        </div>
+        <div className="row mt-2">
+          <div className="col-md-12">
+            General Summary Rule
+            <br />
+            <small>
+              Trade when absolute majority of indicators shows same direction (buy or sell).
+            </small>
+          </div>
+        </div>
+      </span>
+    );
+    return panel;
   }
 
   handleOptionChange(changeEvent) {
@@ -65,6 +93,7 @@ class AlgoPanel extends Component {
   showAlgorithm() {
     //let userPair = this.props.user.monitor[this.props.index];
     let result = <div />;
+    let genInfo = this.generalInfo();
     let indicator = this.state.selectedIndicator;
     let index = this.props.index;
     switch (this.state.algo.toUpperCase()) {
@@ -72,25 +101,25 @@ class AlgoPanel extends Component {
         result = <AlgoSMA index={index} indicator={indicator} />;
         break;
       case "EMA":
-        result = <AlgoEMA user={this.props.user} index={index} indicator={indicator} />;
+        result = <AlgoEMA index={index} indicator={indicator} />;
         break;
       case "MACD":
-        result = <AlgoMACD user={this.props.user} index={index} indicator={indicator} />;
+        result = <AlgoMACD index={index} indicator={indicator} />;
         break;
       case "RSI":
-        result = <AlgoRSI user={this.props.user} index={index} indicator={indicator} />;
+        result = <AlgoRSI index={index} indicator={indicator} />;
         break;
       case "BBANDS":
-        result = <AlgoBBands user={this.props.user} index={index} indicator={indicator} />;
+        result = <AlgoBBands index={index} indicator={indicator} />;
         break;
       case "KLINES":
-        result = <AlgoKLines user={this.props.user} index={index} indicator={indicator} />;
+        result = <AlgoKLines index={index} indicator={indicator} />;
         break;
       default:
-        result = <div />;
+        result = genInfo;
         break;
     }
-    return <div className="col-md-10">{result}</div>;
+    return <div className="col-md-9">{result}</div>;
   }
 
   selectAlgorithm() {
@@ -128,9 +157,9 @@ class AlgoPanel extends Component {
             </div>
           </div>
           <div className="row">
-            <div className="col-md-2">
+            <div className="col-md-3">
               <select
-                className="form-control ml-2"
+                className="form-control ml-2 w-75"
                 id="algos"
                 value={this.state.algo}
                 onChange={this.handleOptionChange}

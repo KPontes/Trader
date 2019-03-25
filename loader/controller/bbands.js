@@ -17,6 +17,9 @@ const calculate = function(data, period) {
       var bbands = [];
       const arr = data.map(item => item.close);
       const middle = await mavg.calculateSMA(arr, period);
+      let multiplier = 2;
+      if (period > 20) multiplier = 2.1;
+      if (period < 20) multiplier = 1.9;
       for (var i = 0; i < data.length; i++) {
         oBBands = {
           close: 0,
@@ -30,8 +33,8 @@ const calculate = function(data, period) {
         oBBands.middle = middle[i];
         if (i >= period) {
           oBBands.stdev = _.round(stdev.stdev(arr.slice(i - period, i)), 12);
-          oBBands.upper = _.round(oBBands.middle + oBBands.stdev * 2, 12);
-          oBBands.lower = _.round(oBBands.middle - oBBands.stdev * 2, 12);
+          oBBands.upper = _.round(oBBands.middle + oBBands.stdev * multiplier, 12);
+          oBBands.lower = _.round(oBBands.middle - oBBands.stdev * multiplier, 12);
           oBBands.bandWidth = oBBands.upper - oBBands.lower;
         }
         bbands.push(oBBands);

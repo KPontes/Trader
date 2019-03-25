@@ -1,15 +1,101 @@
 import React, { Component } from "react";
 import _ from "lodash";
 import moment from "moment";
+import Modal from "react-modal";
+
+const customStyles = {
+  content: {
+    top: "20%",
+    left: "30%",
+    right: "20%",
+    bottom: "auto",
+    marginRight: "-20%",
+    transform: "translate(-20%, -20%)"
+  }
+};
+
+// Make sure to bind modal to your appElement (http://reactcommunity.org/react-modal/accessibility/)
+Modal.setAppElement("#root");
 
 class TradeList extends Component {
   constructor(props) {
     super(props);
     this.handleCloseClick = this.handleCloseClick.bind(this);
+    this.openModal = this.openModal.bind(this);
+    this.afterOpenModal = this.afterOpenModal.bind(this);
+    this.closeModal = this.closeModal.bind(this);
     this.state = {
       msg: "",
-      updated: false
+      updated: false,
+      modalIsOpen: false
     };
+  }
+
+  openModal(resultShort) {
+    this.setState({ modalIsOpen: true, resultShort });
+  }
+
+  afterOpenModal() {
+    // references are now sync'd and can be accessed.
+    this.subtitle.style.color = "navy";
+  }
+
+  closeModal() {
+    this.setState({ modalIsOpen: false });
+  }
+
+  modalWindow(resultShort) {
+    return (
+      <span className="btn-link cursor-pointer" onClick={() => this.openModal(resultShort)}>
+        Trade Log
+      </span>
+    );
+  }
+
+  showModal() {
+    let title = (
+      <div className="row">
+        <div className="col-md-2">Indicator</div>
+        <div className="col-md-1">Oper</div>
+        <div className="col-md-1">Factor</div>
+        <div className="col-md-8">Rule</div>
+      </div>
+    );
+    let strLog = this.state.resultShort.map(elem => {
+      return (
+        <div className="row" style={{ fontSize: "small" }}>
+          <div className="col-md-2">{elem.indic}</div>
+          <div className="col-md-1">{elem.oper}</div>
+          <div className="col-md-1">{elem.factor}</div>
+          <div className="col-md-8">{elem.rules}</div>
+        </div>
+      );
+    });
+    return (
+      <Modal
+        isOpen={this.state.modalIsOpen}
+        onAfterOpen={this.afterOpenModal}
+        onRequestClose={this.closeModal}
+        style={customStyles}
+        contentLabel="Example Modal"
+      >
+        {" "}
+        <div className="row">
+          <div className="col-md-4">
+            <h5 ref={subtitle => (this.subtitle = subtitle)}>Trade Decision Logs</h5>
+          </div>
+          <div className="col-md-8" align="right">
+            <button className="btn btn-dark btn-sm" onClick={this.closeModal}>
+              close
+            </button>
+          </div>
+        </div>
+        <div>
+          {title}
+          {strLog}
+        </div>
+      </Modal>
+    );
   }
 
   handleCloseClick(changeEvent) {
@@ -61,6 +147,7 @@ class TradeList extends Component {
           <div className="col-md-1"> Diff</div>
           <div className="col-md-1"> %</div>
           <div className="col-md-2"> Date</div>
+          <div className="col-md-2"> Action</div>
         </div>
       </div>
     );
@@ -71,6 +158,7 @@ class TradeList extends Component {
     let ind = 0;
     let totPercent = 0;
     for (let element of this.props.trades) {
+      let modalWindow = this.modalWindow(element.log.resultShort);
       let tokenAmount;
       let marketAmount;
       if (element.side === "sell") {
@@ -115,6 +203,7 @@ class TradeList extends Component {
               <label className={color}>{_.round(percent, 2)}</label>
             </div>
             <div className="col-md-2">{moment(element.createdAt).format("YYYY-MM-DD hh:mm")}</div>
+            <div className="col-md-2"> {modalWindow}</div>{" "}
           </div>
         </div>
       );
@@ -141,10 +230,15 @@ class TradeList extends Component {
     }
     let title = this.title();
     let detail = this.List();
+    let showModal = <div />;
+    if (this.state.modalIsOpen) {
+      showModal = this.showModal();
+    }
     return (
       <div>
         {title}
         {detail}
+        {showModal}
       </div>
     );
   }

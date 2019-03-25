@@ -214,6 +214,22 @@ function updateAlgoParams(requestobj) {
       }
       oneuser.monitor[ind].configcalc = requestobj.configcalc;
       oneuser.monitor[ind].configrule = requestobj.configrule;
+      let algosArr = oneuser.monitor[ind].algos;
+      let keys = Object.keys(requestobj.algo);
+      let values = Object.values(requestobj.algo);
+      let pos = algosArr.indexOf(keys[0]);
+      if (values[0] === false) {
+        if (pos !== -1) {
+          //get element out of algo array
+          algosArr.splice(pos, 1);
+        }
+      } else {
+        if (pos === -1) {
+          //add element to algo array
+          algosArr.push(keys[0]);
+        }
+      }
+      oneuser.monitor[ind].algos = algosArr;
       await oneuser.save();
       resolve(oneuser);
     } catch (err) {

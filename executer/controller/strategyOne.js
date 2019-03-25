@@ -202,19 +202,23 @@ function summaryRules(userpair, summary) {
     let rule = "none";
     //treat summary rules
     if (userpair.summaryRule.count === "unanimous" && userpair.summaryRule.factor === "3") {
-      if (
-        summary.countBuy >= summary.countSell + summary.countNone &&
-        summary.factorBuy > summary.factorSell + 3
-      ) {
-        oper = "buy";
-        rule = "count & factor summary";
-      }
-      if (
-        summary.countSell >= summary.countBuy + summary.countNone &&
-        summary.factorSell > summary.factorBuy + 3
-      ) {
-        oper = "sell";
-        rule = "count & factor summary";
+      if (summary.countBuy === summary.countSell) {
+        return { oper, rule };
+      } else {
+        if (
+          summary.countBuy >= summary.countSell + summary.countNone &&
+          summary.factorBuy > summary.factorSell + 3
+        ) {
+          oper = "buy";
+          rule = "count & factor summary";
+        }
+        if (
+          summary.countSell >= summary.countBuy + summary.countNone &&
+          summary.factorSell > summary.factorBuy + 3
+        ) {
+          oper = "sell";
+          rule = "count & factor summary";
+        }
       }
     }
     return { oper, rule };

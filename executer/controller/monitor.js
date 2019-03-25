@@ -2,8 +2,9 @@
 const moment = require("moment");
 
 const { User } = require("../models/user.js");
-//const { LoaderSettings } = require("../models/loaderSettings.js");
 const trade = require("./trade.js");
+const sysconst = require("../utils/sysconst.js");
+//const { LoaderSettings } = require("../models/loaderSettings.js");
 
 ("use strict");
 
@@ -42,17 +43,42 @@ function execOneUserSymbol(reqobj, user, ind) {
       let exchange = reqobj.exchange;
       let priceList = reqobj.priceList;
       let symbol = reqobj.symbol;
-      let config = {
+
+      let defConfig = sysconst.DEFAULTCONFIG;
+      let configcalc = {};
+      let configrule = {};
+      Object.entries(defConfig).map(element => {
+        if (element[0].substring(0, 5) === "calc_") {
+          configcalc[element[0].substring(5)] = element[1];
+        }
+        if (element[0].substring(0, 5) === "rule_") {
+          configrule[element[0].substring(5)] = element[1];
+        }
+      });
+      let userConfig = {
         calc: user.monitor[ind].configcalc,
         rule: user.monitor[ind].configrule
       };
+      //merge default items with the ones on userConfig. This is to prevent errors
+      //when adding new algorithms to the application
+      Object.keys(configcalc).map(key => {
+        if (!userConfig.calc[key]) {
+          userConfig.calc[key] = configcalc[key];
+        }
+      });
+      Object.keys(configrule).map(key => {
+        if (!userConfig.rule[key]) {
+          userConfig.rule[key] = configrule[key];
+        }
+      });
+
       let stResults = await trade.getStrategyResultsAPI(
         user.monitor[ind].strategy,
         user.exchange,
         user.monitor[ind].symbol,
         user.monitor[ind].period,
         user.monitor[ind].largeInterval,
-        config
+        userConfig
       );
       if (!stResults.summaryShort) {
         throw "Invalid GetStrategyResults";

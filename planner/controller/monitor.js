@@ -1,6 +1,6 @@
 const moment = require("moment");
 
-const StrategyOne = require("../strategies/strategyOne.js");
+const StrategyOne = require("./strategyOne.js");
 
 ("use strict");
 

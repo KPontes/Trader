@@ -13,6 +13,7 @@ class TradeReport extends Component {
     super(props);
     this.handleBtnClick = this.handleBtnClick.bind(this);
     this.handleOptionChange = this.handleOptionChange.bind(this);
+    this.handleCheckChange = this.handleCheckChange.bind(this);
     this.handleDateChange = this.handleDateChange.bind(this);
     this.onInputChange = this.onInputChange.bind(this);
     this.getData = this.getData.bind(this);
@@ -25,6 +26,7 @@ class TradeReport extends Component {
       symbol,
       perPage: 50,
       tradelist: "show",
+      mode: "real",
       btnEnabled: true
     };
   }
@@ -41,7 +43,8 @@ class TradeReport extends Component {
         });
       }
     };
-
+    let test = this.state.mode === "test";
+    let real = this.state.mode === "real";
     var lista = opts();
     let btnLine = this.btns();
     let details;
@@ -68,7 +71,12 @@ class TradeReport extends Component {
             </div>
             <div className="col-md-2">
               <label>
-                <b>Number of Lines</b>
+                <b>Rows</b>
+              </label>
+            </div>
+            <div className="col-md-2">
+              <label>
+                <b>Mode</b>
               </label>
             </div>
           </div>
@@ -91,7 +99,7 @@ class TradeReport extends Component {
                 onChange={this.handleDateChange}
               />
             </div>
-            <div className="col-md-3">
+            <div className="col-md-2">
               <input
                 className="form-control"
                 id="perPage"
@@ -99,6 +107,32 @@ class TradeReport extends Component {
                 value={this.state.perPage}
                 onChange={this.onInputChange}
               />
+            </div>
+            <div className="form-group col-md-2 p-1">
+              <span className="border border-secondary p-2">
+                <div className="form-check form-check-inline">
+                  <input
+                    className="form-check-input "
+                    type="radio"
+                    id="checkTest"
+                    value="test"
+                    checked={test}
+                    onChange={this.handleCheckChange}
+                  />
+                  <label className="form-check-label">test</label>
+                </div>
+                <div className="form-check form-check-inline">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    id="checkReal"
+                    value="real"
+                    checked={real}
+                    onChange={this.handleCheckChange}
+                  />
+                  <label className="form-check-label">real</label>
+                </div>
+              </span>
             </div>
             {btnLine}
           </div>
@@ -127,6 +161,12 @@ class TradeReport extends Component {
     return btns;
   }
 
+  handleCheckChange(changeEvent) {
+    this.setState({
+      mode: changeEvent.target.value
+    });
+  }
+
   handleBtnClick(event) {
     try {
       let _this = this;
@@ -137,7 +177,8 @@ class TradeReport extends Component {
         data: {
           email: this.props.user.email,
           symbol: this.state.symbol,
-          startDate: this.state.startDate
+          startDate: this.state.startDate,
+          mode: this.state.mode
         },
         headers: { "x-auth": this.props.token }
       })
